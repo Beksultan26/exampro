@@ -9,6 +9,7 @@ WORKDIR /app/server
 RUN npm install
 RUN npm run build
 RUN npx prisma generate
+RUN npx prisma migrate deploy
 
 EXPOSE 5000
 
