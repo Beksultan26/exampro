@@ -1,0 +1,114 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+model User {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  passwordHash String
+  role         Role          @default(STUDENT)
+  createdAt    DateTime      @default(now())
+
+  attempts     QuizAttempt[]
+}
+
+model Subject {
+  id          String        @id @default(uuid())
+  title       String
+  slug        String        @unique
+  description String?
+  icon        String?
+  color       String?
+  group       String
+
+  topics      TheoryTopic[]
+  questions   Question[]
+  attempts    QuizAttempt[]
+}
+
+model TheoryTopic {
+  id         String   @id @default(uuid())
+  subjectId  String
+  title      String
+  slug       String   @unique
+  content    String
+  order      Int      @default(0)
+
+  subject    Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+}
+
+model Question {
+  id           String         @id @default(uuid())
+  subjectId    String
+  questionText String
+  explanation  String?
+  order        Int            @default(0)
+
+  subject      Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  options      AnswerOption[]
+  answers      QuizAnswer[]
+}
+
+model AnswerOption {
+  id         String       @id @default(uuid())
+  questionId String
+  optionText String
+  isCorrect  Boolean      @default(false)
+
+  question   Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  answers    QuizAnswer[]
+}
+
+model QuizAttempt {
+  id             String       @id @default(uuid())
+  userId         String
+  subjectId      String
+  score          Int
+  totalQuestions Int
+  createdAt      DateTime     @default(now())
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject        Subject      @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  answers        QuizAnswer[]
+}
+
+model QuizAnswer {
+  id               String       @id @default(uuid())
+  attemptId        String
+  questionId       String
+  selectedOptionId String
+  isCorrect        Boolean
+
+  attempt          QuizAttempt  @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  question         Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  selectedOption   AnswerOption @relation(fields: [selectedOptionId], references: [id], onDelete: Cascade)
+}
+
+model AuthOtp {
+  id         String   @id @default(uuid())
+  email      String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int      @default(0)
+  createdAt  DateTime @default(now())
+}
+
+model PasswordResetOtp {
+  id         String   @id @default(uuid())
+  email      String
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int      @default(0)
+  createdAt  DateTime @default(now())
+}
