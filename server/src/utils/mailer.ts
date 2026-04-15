@@ -1,16 +1,18 @@
 import nodemailer from "nodemailer";
 
-export const transporter = nodemailer.createTransport({
+export const transporter = nodemailer.default.createTransport({
   host: "smtp-relay.brevo.com",
   port: 587,
   secure: false,
+  requireTLS: true,
+  family: 4, // 🔥 важно
   auth: {
     user: "apikey",
     pass: process.env.SMTP_PASS,
   },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
+  connectionTimeout: 20000,
+  greetingTimeout: 20000,
+  socketTimeout: 20000,
 } as any);
 
 export async function sendOtpEmail(email: string, code: string) {
