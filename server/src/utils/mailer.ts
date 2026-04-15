@@ -1,8 +1,7 @@
 import nodemailer from "nodemailer";
-import SMTPTransport from "nodemailer/lib/smtp-transport";
 import dns from "node:dns";
 
-const transportOptions = {
+export const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
   secure: true,
@@ -15,7 +14,7 @@ const transportOptions = {
   },
   lookup: (
     hostname: string,
-    _options: dns.LookupOneOptions,
+    _options: unknown,
     callback: (
       err: NodeJS.ErrnoException | null,
       address: string,
@@ -24,19 +23,7 @@ const transportOptions = {
   ) => {
     dns.lookup(hostname, { family: 4 }, callback);
   },
-} as SMTPTransport.Options & {
-  lookup: (
-    hostname: string,
-    options: dns.LookupOneOptions,
-    callback: (
-      err: NodeJS.ErrnoException | null,
-      address: string,
-      family: number
-    ) => void
-  ) => void;
-};
-
-export const transporter = nodemailer.createTransport(transportOptions);
+} as any);
 
 export async function sendOtpEmail(email: string, code: string) {
   try {
