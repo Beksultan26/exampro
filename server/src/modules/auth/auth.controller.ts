@@ -35,6 +35,8 @@ export async function registerController(req: Request, res: Response) {
 
     return res.status(201).json(result);
   } catch (error) {
+    console.error("REGISTER ERROR:", error);
+
     const message =
       error instanceof Error ? error.message : "Ошибка регистрации";
 
@@ -42,7 +44,9 @@ export async function registerController(req: Request, res: Response) {
       return res.status(409).json({ message });
     }
 
-    return res.status(500).json({ message: "Внутренняя ошибка сервера" });
+    return res.status(500).json({
+      message,
+    });
   }
 }
 
@@ -60,13 +64,17 @@ export async function loginController(req: Request, res: Response) {
     const result = await loginUser(parsed.data.email, parsed.data.password);
     return res.status(200).json(result);
   } catch (error) {
+    console.error("LOGIN ERROR:", error);
+
     const message = error instanceof Error ? error.message : "Ошибка входа";
 
     if (message === "Неверный email или пароль") {
       return res.status(401).json({ message });
     }
 
-    return res.status(500).json({ message: "Внутренняя ошибка сервера" });
+    return res.status(500).json({
+      message,
+    });
   }
 }
 
@@ -84,7 +92,10 @@ export async function verifyOtpController(req: Request, res: Response) {
     const result = await verifyOtp(parsed.data.email, parsed.data.code);
     return res.status(200).json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Ошибка подтверждения";
+    console.error("VERIFY OTP ERROR:", error);
+
+    const message =
+      error instanceof Error ? error.message : "Ошибка подтверждения";
 
     if (
       message === "Код не найден" ||
@@ -95,7 +106,9 @@ export async function verifyOtpController(req: Request, res: Response) {
       return res.status(400).json({ message });
     }
 
-    return res.status(500).json({ message: "Внутренняя ошибка сервера" });
+    return res.status(500).json({
+      message,
+    });
   }
 }
 
@@ -112,9 +125,14 @@ export async function forgotPasswordController(req: Request, res: Response) {
   try {
     const result = await sendForgotPasswordCode(parsed.data.email);
     return res.status(200).json(result);
-  } catch {
+  } catch (error) {
+    console.error("FORGOT PASSWORD ERROR:", error);
+
+    const message =
+      error instanceof Error ? error.message : "Ошибка отправки кода";
+
     return res.status(500).json({
-      message: "Внутренняя ошибка сервера",
+      message,
     });
   }
 }
@@ -135,9 +153,13 @@ export async function resetPasswordController(req: Request, res: Response) {
       parsed.data.code,
       parsed.data.newPassword
     );
+
     return res.status(200).json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Ошибка сброса пароля";
+    console.error("RESET PASSWORD ERROR:", error);
+
+    const message =
+      error instanceof Error ? error.message : "Ошибка сброса пароля";
 
     if (
       message === "Код не найден" ||
@@ -150,21 +172,30 @@ export async function resetPasswordController(req: Request, res: Response) {
     }
 
     return res.status(500).json({
-      message: "Внутренняя ошибка сервера",
+      message,
     });
   }
 }
 
 export async function meController(req: AuthRequest, res: Response) {
-  if (!req.user) {
-    return res.status(401).json({ message: "Не авторизован" });
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Не авторизован" });
+    }
+
+    const user = await getCurrentUser(req.user.userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "Пользователь не найден" });
+    }
+
+    return res.status(200).json(user);
+  } catch (error) {
+    console.error("ME ERROR:", error);
+
+    const message =
+      error instanceof Error ? error.message : "Ошибка получения пользователя";
+
+    return res.status(500).json({ message });
   }
-
-  const user = await getCurrentUser(req.user.userId);
-
-  if (!user) {
-    return res.status(404).json({ message: "Пользователь не найден" });
-  }
-
-  return res.status(200).json(user);
 }
