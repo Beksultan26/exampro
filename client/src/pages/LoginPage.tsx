@@ -13,22 +13,26 @@ export default function LoginPage() {
     e.preventDefault();
     console.log("LOGIN CLICKED");
 
-    setError("");
-
     try {
       const normalizedEmail = email.trim().toLowerCase();
 
-      const { data } = await api.post("/auth/login", {
+      console.log("BEFORE REQUEST", {
+        url: "/auth/login",
+        email: normalizedEmail,
+      });
+
+      const response = await api.post("/auth/login", {
         email: normalizedEmail,
         password,
       });
 
-      console.log("LOGIN RESPONSE:", data);
+      console.log("AFTER REQUEST", response.data);
 
       sessionStorage.setItem("pending2faEmail", normalizedEmail);
       navigate("/verify-otp");
     } catch (err: any) {
-      console.error("LOGIN ERROR:", err?.response?.data || err);
+      console.error("LOGIN ERROR FULL:", err);
+      console.error("LOGIN ERROR RESPONSE:", err?.response?.data);
       setError(err?.response?.data?.message || "Ошибка входа");
     }
   };
