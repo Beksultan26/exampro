@@ -2125,3 +2125,29 @@ a {
 .auth-hint li {
   margin-bottom: 4px;
 }
+
+.site-footer {
+  margin-top: 80px;
+  padding: 40px 20px 20px;
+  background: linear-gradient(180deg, #0b1220, #070d18);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+  color: #cbd5f5;
+}
+
+.footer-content h3 {
+  font-size: 20px;
+  margin-bottom: 8px;
+  color: white;
+}
+
+.footer-content p {
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.footer-bottom {
+  margin-top: 20px;
+  font-size: 13px;
+  opacity: 0.6;
+}

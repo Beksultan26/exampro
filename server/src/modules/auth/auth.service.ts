@@ -87,7 +87,12 @@ export async function loginUser(email: string, password: string) {
     },
   });
 
-  await sendOtpEmail(normalizedEmail, code);
+  try {
+    await sendOtpEmail(normalizedEmail, code);
+  } catch (error) {
+    console.error("EMAIL ERROR IN loginUser:", error);
+    throw error;
+  }
 
   return {
     requires2fa: true,
@@ -163,7 +168,6 @@ export async function sendForgotPasswordCode(email: string) {
     where: { email: normalizedEmail },
   });
 
-  // Не раскрываем, существует ли email
   if (!user) {
     return {
       message: "Если аккаунт существует, код для сброса отправлен на email",
@@ -187,7 +191,12 @@ export async function sendForgotPasswordCode(email: string) {
     },
   });
 
-  await sendPasswordResetEmail(normalizedEmail, code);
+  try {
+    await sendPasswordResetEmail(normalizedEmail, code);
+  } catch (error) {
+    console.error("EMAIL ERROR IN sendForgotPasswordCode:", error);
+    throw error;
+  }
 
   return {
     message: "Если аккаунт существует, код для сброса отправлен на email",

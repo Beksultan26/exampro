@@ -17,9 +17,13 @@ export default function LoginPage() {
       sessionStorage.setItem("pending2faEmail", email.trim().toLowerCase());
       navigate("/verify-otp");
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Ошибка входа");
-    }
-  };
+  console.log("LOGIN ERROR:", err?.response?.data || err);
+  setError(
+    err?.response?.data?.message ||
+    err?.message ||
+    "Ошибка входа"
+  );
+}
 
   return (
     <div className="auth-page">
