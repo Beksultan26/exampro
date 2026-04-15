@@ -2,7 +2,7 @@ import nodemailer from "nodemailer";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import dns from "node:dns";
 
-const transportOptions: SMTPTransport.Options = {
+const transportOptions = {
   host: "smtp.gmail.com",
   port: 465,
   secure: true,
@@ -13,11 +13,27 @@ const transportOptions: SMTPTransport.Options = {
   tls: {
     servername: "smtp.gmail.com",
   },
-
-  // принудительно IPv4, чтобы Railway не лез в IPv6
-  lookup: (hostname, _options, callback) => {
+  lookup: (
+    hostname: string,
+    _options: dns.LookupOneOptions,
+    callback: (
+      err: NodeJS.ErrnoException | null,
+      address: string,
+      family: number
+    ) => void
+  ) => {
     dns.lookup(hostname, { family: 4 }, callback);
   },
+} as SMTPTransport.Options & {
+  lookup: (
+    hostname: string,
+    options: dns.LookupOneOptions,
+    callback: (
+      err: NodeJS.ErrnoException | null,
+      address: string,
+      family: number
+    ) => void
+  ) => void;
 };
 
 export const transporter = nodemailer.createTransport(transportOptions);
