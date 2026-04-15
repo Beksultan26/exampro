@@ -13,17 +13,18 @@ export default function LoginPage() {
     setError("");
 
     try {
-      await api.post("/auth/login", { email, password });
+      await api.post("/auth/login", {
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
       sessionStorage.setItem("pending2faEmail", email.trim().toLowerCase());
       navigate("/verify-otp");
     } catch (err: any) {
-  console.log("LOGIN ERROR:", err?.response?.data || err);
-  setError(
-    err?.response?.data?.message ||
-    err?.message ||
-    "Ошибка входа"
-  );
-}
+      console.error("LOGIN ERROR:", err?.response?.data || err);
+      setError(err?.response?.data?.message || "Ошибка входа");
+    }
+  };
 
   return (
     <div className="auth-page">
