@@ -2,21 +2,63 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../api";
 
+type FormErrors = {
+  name?: string;
+  email?: string;
+  password?: string;
+  general?: string;
+};
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
+
 export default function RegisterPage() {
   const navigate = useNavigate();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  const validateForm = (): FormErrors => {
+    const newErrors: FormErrors = {};
+
+    if (!name.trim()) {
+      newErrors.name = "Введите имя";
+    } else if (name.trim().length < 2) {
+      newErrors.name = "Имя должно содержать минимум 2 символа";
+    }
+
+    if (!email.trim()) {
+      newErrors.email = "Введите email";
+    } else if (!emailRegex.test(email)) {
+      newErrors.email = "Введите корректный email";
+    }
+
+    if (!password) {
+      newErrors.password = "Введите пароль";
+    } else if (!passwordRegex.test(password)) {
+      newErrors.password =
+        "Минимум 8 символов, хотя бы 1 буква и 1 цифра";
+    }
+
+    return newErrors;
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+    setErrors({});
+
+    const validationErrors = validateForm();
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
 
     try {
       const { data } = await api.post("/auth/register", {
-        name,
-        email,
+        name: name.trim(),
+        email: email.trim(),
         password,
       });
 
@@ -24,7 +66,9 @@ export default function RegisterPage() {
       navigate("/profile");
       window.location.reload();
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Ошибка регистрации");
+      setErrors({
+        general: err?.response?.data?.message || "Ошибка регистрации",
+      });
     }
   };
 
@@ -40,26 +84,48 @@ export default function RegisterPage() {
           type="text"
           placeholder="Введите имя"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            setErrors((prev) => ({ ...prev, name: "", general: "" }));
+          }}
         />
+        {errors.name && <div className="auth-error">{errors.name}</div>}
 
         <input
           type="email"
           placeholder="Введите email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => {
+            setEmail(e.target.value);
+            setErrors((prev) => ({ ...prev, email: "", general: "" }));
+          }}
         />
+        {errors.email && <div className="auth-error">{errors.email}</div>}
 
         <input
           type="password"
           placeholder="Создайте пароль"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            setErrors((prev) => ({ ...prev, password: "", general: "" }));
+          }}
         />
+
+        <div className="auth-hint">
+  <p><strong>Требования к паролю:</strong></p>
+  <ul>
+    <li>Минимум 8 символов</li>
+    <li>Минимум одна буква</li>
+    <li>Минимум одна цифра</li>
+  </ul>
+</div>
+
+        {errors.password && <div className="auth-error">{errors.password}</div>}
 
         <button type="submit">Зарегистрироваться</button>
 
-        {error && <div className="auth-error">{error}</div>}
+        {errors.general && <div className="auth-error">{errors.general}</div>}
 
         <p className="auth-text">
           Уже есть аккаунт? <Link to="/login">Войти</Link>

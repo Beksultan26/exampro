@@ -2105,3 +2105,23 @@ a {
     text-align: left;
   }
 }
+
+.auth-hint {
+  margin-top: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: #bfe9ff;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.auth-hint ul {
+  margin: 6px 0 0 16px;
+  padding: 0;
+}
+
+.auth-hint li {
+  margin-bottom: 4px;
+}
