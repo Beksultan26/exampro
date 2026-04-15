@@ -1,9 +1,10 @@
 import nodemailer from "nodemailer";
+import SMTPTransport from "nodemailer/lib/smtp-transport";
 
 const smtpPort = Number(process.env.SMTP_PORT) || 587;
 const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
 
-export const transporter = nodemailer.createTransport({
+const transportOptions: SMTPTransport.Options = {
   host: smtpHost,
   port: smtpPort,
   secure: smtpPort === 465,
@@ -15,7 +16,9 @@ export const transporter = nodemailer.createTransport({
   tls: {
     rejectUnauthorized: false,
   },
-});
+};
+
+export const transporter = nodemailer.createTransport(transportOptions);
 
 transporter.verify((error) => {
   if (error) {
