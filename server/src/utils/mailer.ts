@@ -1,11 +1,11 @@
 import nodemailer from "nodemailer";
 
 export const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
+  host: "smtp-relay.brevo.com",
   port: 587,
-  secure: true,
+  secure: false, // ❗ важно
   auth: {
-    user: process.env.SMTP_USER,
+    user: "apikey", // ❗ обязательно apikey
     pass: process.env.SMTP_PASS,
   },
 });
@@ -14,7 +14,7 @@ export const transporter = nodemailer.createTransport({
 export async function sendOtpEmail(email: string, code: string) {
   try {
     await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      from: process.env.SMTP_FROM, // уже норм
       to: email,
       subject: "Код подтверждения",
       text: `Ваш код: ${code}`,
@@ -31,7 +31,7 @@ export async function sendOtpEmail(email: string, code: string) {
 export async function sendPasswordResetEmail(email: string, code: string) {
   try {
     await transporter.sendMail({
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      from: process.env.SMTP_FROM,
       to: email,
       subject: "Сброс пароля",
       text: `Код для сброса: ${code}`,
