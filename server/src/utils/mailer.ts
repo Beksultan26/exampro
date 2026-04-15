@@ -1,38 +1,21 @@
-import nodemailer from "nodemailer";
-import SMTPTransport from "nodemailer/lib/smtp-transport";
+import { Resend } from "resend";
 
-const smtpPort = Number(process.env.SMTP_PORT) || 587;
-const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
+const resendApiKey = process.env.RESEND_API_KEY;
 
-const transportOptions: SMTPTransport.Options = {
-  host: smtpHost,
-  port: smtpPort,
-  secure: smtpPort === 465,
-  requireTLS: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-  tls: {
-    rejectUnauthorized: false,
-  },
-};
+if (!resendApiKey) {
+  console.error("RESEND_API_KEY is not set");
+}
 
-export const transporter = nodemailer.createTransport(transportOptions);
+const resend = new Resend(resendApiKey);
 
-transporter.verify((error) => {
-  if (error) {
-    console.error("SMTP VERIFY ERROR:", error);
-  } else {
-    console.log("SMTP server is ready");
-  }
-});
+const fromEmail =
+  process.env.RESEND_FROM_EMAIL || "ExamPro <onboarding@resend.dev>";
 
 export async function sendOtpEmail(email: string, code: string) {
   try {
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || `"ExamPro" <${process.env.SMTP_USER}>`,
-      to: email,
+    const { data, error } = await resend.emails.send({
+      from: fromEmail,
+      to: [email],
       subject: "Код подтверждения входа",
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px;">
@@ -42,9 +25,15 @@ export async function sendOtpEmail(email: string, code: string) {
           <p>Код действует 10 минут.</p>
         </div>
       `,
+      text: `Ваш код для входа в ExamPro: ${code}. Код действует 10 минут.`,
     });
 
-    console.log("OTP отправлен:", email);
+    if (error) {
+      console.error("RESEND SEND OTP ERROR:", error);
+      throw new Error(error.message || "Ошибка отправки OTP через Resend");
+    }
+
+    console.log("OTP отправлен через Resend:", email, data);
   } catch (error) {
     console.error("SEND OTP EMAIL ERROR:", error);
     throw error;
@@ -53,9 +42,9 @@ export async function sendOtpEmail(email: string, code: string) {
 
 export async function sendPasswordResetEmail(email: string, code: string) {
   try {
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || `"ExamPro" <${process.env.SMTP_USER}>`,
-      to: email,
+    const { data, error } = await resend.emails.send({
+      from: fromEmail,
+      to: [email],
       subject: "Сброс пароля",
       html: `
         <div style="font-family: Arial, sans-serif; padding: 20px;">
@@ -67,9 +56,15 @@ export async function sendPasswordResetEmail(email: string, code: string) {
           <p>Если это были не вы, просто проигнорируйте письмо.</p>
         </div>
       `,
+      text: `Код для сброса пароля в ExamPro: ${code}. Код действует 10 минут.`,
     });
 
-    console.log("RESET OTP отправлен:", email);
+    if (error) {
+      console.error("RESEND SEND RESET EMAIL ERROR:", error);
+      throw new Error(error.message || "Ошибка отправки письма сброса через Resend");
+    }
+
+    console.log("RESET OTP отправлен через Resend:", email, data);
   } catch (error) {
     console.error("SEND RESET EMAIL ERROR:", error);
     throw error;
