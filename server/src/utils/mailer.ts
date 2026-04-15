@@ -1,13 +1,20 @@
 import nodemailer from "nodemailer";
 
+const smtpPort = Number(process.env.SMTP_PORT) || 587;
+const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
+
 export const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: Number(process.env.SMTP_PORT) === 465,
+  host: smtpHost,
+  port: smtpPort,
+  secure: smtpPort === 465,
   requireTLS: true,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
+  },
+  family: 4,
+  tls: {
+    rejectUnauthorized: false,
   },
 });
 

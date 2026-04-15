@@ -15,6 +15,8 @@ import adminRoutes from "./modules/admin/admin.routes";
 
 const app = express();
 
+app.set("trust proxy", 1);
+
 app.use(
   cors({
     origin: env.clientUrl,
@@ -25,6 +27,7 @@ app.use(
 app.use(helmet());
 app.use(morgan("dev"));
 app.use(express.json());
+
 app.use("/api/admin", adminRoutes);
 
 app.get("/api/health", (_req, res) => {
