@@ -2,6 +2,7 @@ const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
 const senderEmail =
   process.env.SMTP_FROM_EMAIL || "noreply@examproapp.online";
+
 const senderName =
   process.env.SMTP_FROM_NAME || "ExamPro";
 
@@ -30,7 +31,6 @@ async function sendEmailViaBrevo({
     subject,
     senderEmail,
     senderName,
-    hasApiKey: Boolean(brevoApiKey),
   });
 
   const response = await fetch(BREVO_API_URL, {
@@ -52,25 +52,25 @@ async function sendEmailViaBrevo({
     }),
   });
 
-  const rawText = await response.text();
+  const responseText = await response.text();
 
   console.log("BREVO STATUS:", response.status);
-  console.log("BREVO RESPONSE:", rawText);
+  console.log("BREVO RESPONSE:", responseText);
 
   if (!response.ok) {
-    throw new Error(`Brevo API failed with status ${response.status}: ${rawText}`);
+    throw new Error(`Brevo error: ${response.status} - ${responseText}`);
   }
 }
 
 export async function sendOtpEmail(email: string, code: string) {
   const subject = "Код подтверждения входа";
-  const text = `Ваш код подтверждения: ${code}. Код действует 10 минут.`;
+  const text = `Ваш код подтверждения: ${code}`;
   const html = `
-    <div style="font-family: Arial, sans-serif; padding: 20px;">
+    <div style="font-family: Arial; padding: 20px;">
       <h2>ExamPro</h2>
-      <p>Ваш код подтверждения:</p>
+      <p>Ваш код:</p>
       <h1 style="letter-spacing: 6px;">${code}</h1>
-      <p>Код действует 10 минут.</p>
+      <p>Код действует 10 минут</p>
     </div>
   `;
 
@@ -86,13 +86,13 @@ export async function sendOtpEmail(email: string, code: string) {
 
 export async function sendPasswordResetEmail(email: string, code: string) {
   const subject = "Сброс пароля";
-  const text = `Ваш код для сброса пароля: ${code}. Код действует 10 минут.`;
+  const text = `Ваш код для сброса: ${code}`;
   const html = `
-    <div style="font-family: Arial, sans-serif; padding: 20px;">
-      <h2>ExamPro</h2>
-      <p>Ваш код для сброса:</p>
+    <div style="font-family: Arial; padding: 20px;">
+      <h2>Сброс пароля</h2>
+      <p>Ваш код:</p>
       <h1 style="letter-spacing: 6px;">${code}</h1>
-      <p>Код действует 10 минут.</p>
+      <p>Код действует 10 минут</p>
     </div>
   `;
 
@@ -103,5 +103,5 @@ export async function sendPasswordResetEmail(email: string, code: string) {
     html,
   });
 
-  console.log("RESET EMAIL отправлен:", email);
+  console.log("RESET OTP отправлен:", email);
 }

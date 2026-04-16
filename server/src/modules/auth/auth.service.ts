@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "../../config/db";
 import { signAccessToken } from "../../utils/jwt";
-import { sendOtpEmail, sendPasswordResetEmail } from "../../utils/mailer";
+import { sendOtpEmail, sendPasswordResetEmail } from "../../config/mailer";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();

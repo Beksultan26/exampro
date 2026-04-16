@@ -13,9 +13,11 @@ const auth_routes_1 = __importDefault(require("./modules/auth/auth.routes"));
 const subjects_routes_1 = __importDefault(require("./modules/subjects/subjects.routes"));
 const theory_routes_1 = __importDefault(require("./modules/theory/theory.routes"));
 const quiz_routes_1 = __importDefault(require("./modules/quiz/quiz.routes"));
-const env_1 = require("./config/env");
 const admin_routes_1 = __importDefault(require("./modules/admin/admin.routes"));
+const env_1 = require("./config/env");
 const app = (0, express_1.default)();
+// Важно для Railway / rate-limit / X-Forwarded-For
+app.set("trust proxy", 1);
 app.use((0, cors_1.default)({
     origin: env_1.env.clientUrl,
     credentials: true,
@@ -23,11 +25,12 @@ app.use((0, cors_1.default)({
 app.use((0, helmet_1.default)());
 app.use((0, morgan_1.default)("dev"));
 app.use(express_1.default.json());
-app.use("/api/admin", admin_routes_1.default);
+app.use(express_1.default.urlencoded({ extended: true }));
 app.get("/api/health", (_req, res) => {
     res.json({ ok: true, message: "Server is running" });
 });
 app.use("/api/auth", auth_routes_1.default);
+app.use("/api/admin", admin_routes_1.default);
 app.use("/api/subjects", subjects_routes_1.default);
 app.use("/api/topics", theory_routes_1.default);
 app.use("/api/quiz", quiz_routes_1.default);

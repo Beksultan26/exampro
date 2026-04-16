@@ -12,7 +12,7 @@ exports.getCurrentUser = getCurrentUser;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const db_1 = require("../../config/db");
 const jwt_1 = require("../../utils/jwt");
-const mailer_1 = require("../../utils/mailer");
+const mailer_1 = require("../../config/mailer");
 function normalizeEmail(email) {
     return email.trim().toLowerCase();
 }
@@ -79,7 +79,13 @@ async function loginUser(email, password) {
             expiresAt,
         },
     });
-    await (0, mailer_1.sendOtpEmail)(normalizedEmail, code);
+    try {
+        await (0, mailer_1.sendOtpEmail)(normalizedEmail, code);
+    }
+    catch (error) {
+        console.error("EMAIL ERROR IN loginUser:", error);
+        throw error;
+    }
     return {
         requires2fa: true,
         email: normalizedEmail,
@@ -138,7 +144,6 @@ async function sendForgotPasswordCode(email) {
     const user = await db_1.prisma.user.findUnique({
         where: { email: normalizedEmail },
     });
-    // Не раскрываем, существует ли email
     if (!user) {
         return {
             message: "Если аккаунт существует, код для сброса отправлен на email",
@@ -158,7 +163,13 @@ async function sendForgotPasswordCode(email) {
             expiresAt,
         },
     });
-    await (0, mailer_1.sendPasswordResetEmail)(normalizedEmail, code);
+    try {
+        await (0, mailer_1.sendPasswordResetEmail)(normalizedEmail, code);
+    }
+    catch (error) {
+        console.error("EMAIL ERROR IN sendForgotPasswordCode:", error);
+        throw error;
+    }
     return {
         message: "Если аккаунт существует, код для сброса отправлен на email",
     };
