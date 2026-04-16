@@ -1,13 +1,13 @@
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
 const senderEmail =
-  process.env.SMTP_FROM_EMAIL || "noreply@examproapp.online";
+  process.env.SMTP_FROM_EMAIL || "a_tanatova05@mail.ru";
 
 const senderName =
   process.env.SMTP_FROM_NAME || "ExamPro";
 
 const brevoApiKey =
-  process.env.BREVO_API_KEY || process.env.SMTP_PASS || "";
+  process.env.BREVO_API_KEY || "";
 
 type SendEmailParams = {
   to: string;
