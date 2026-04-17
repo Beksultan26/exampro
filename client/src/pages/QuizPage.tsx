@@ -44,7 +44,7 @@ export default function QuizPage() {
   useEffect(() => {
     async function loadQuiz() {
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = localStorage.getItem("token"); // ✅ FIX
 
         if (!token) {
           navigate("/login");
@@ -81,21 +81,6 @@ export default function QuizPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [isExamMode, subject, answers]);
-
-  useEffect(() => {
-    if (!isExamMode) return;
-
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
   }, [isExamMode]);
 
   const question = useMemo(() => {
@@ -137,7 +122,7 @@ export default function QuizPage() {
   async function handleSubmit() {
     if (!subject) return;
 
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("token"); // ✅ FIX
     if (!token) {
       navigate("/login");
       return;
@@ -194,26 +179,12 @@ export default function QuizPage() {
         <div className="exam-timer">⏱ Осталось: {formatTime(timeLeft)}</div>
       )}
 
-      <div className="quiz-header">
-        <div className="quiz-counter">
-          {currentIndex + 1} / {subject.questions.length}
-        </div>
-
-        <div className="quiz-progress-bar">
-          <div
-            className="quiz-progress-fill"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
-
       <div className="quiz-question">{question.questionText}</div>
 
       <div className="quiz-options">
         {question.options.map((option) => (
           <button
             key={option.id}
-            type="button"
             className={`quiz-option ${
               answers[question.id] === option.id ? "selected" : ""
             }`}
@@ -225,29 +196,12 @@ export default function QuizPage() {
       </div>
 
       <div className="quiz-actions">
-        {!isExamMode && (
-          <button
-            type="button"
-            className="btn-outline"
-            onClick={handlePrev}
-            disabled={currentIndex === 0}
-          >
-            Назад
-          </button>
-        )}
-
+        <button onClick={handlePrev}>Назад</button>
         {currentIndex < subject.questions.length - 1 ? (
-          <button type="button" className="btn-primary" onClick={handleNext}>
-            Далее
-          </button>
+          <button onClick={handleNext}>Далее</button>
         ) : (
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={handleSubmit}
-            disabled={submitting}
-          >
-            {submitting ? "Отправка..." : "Завершить тест"}
+          <button onClick={handleSubmit}>
+            {submitting ? "Отправка..." : "Завершить"}
           </button>
         )}
       </div>

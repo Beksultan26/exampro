@@ -31,15 +31,14 @@ export default function RegisterPage() {
 
     if (!email.trim()) {
       newErrors.email = "Введите email";
-    } else if (!emailRegex.test(email)) {
+    } else if (!emailRegex.test(email.trim())) {
       newErrors.email = "Введите корректный email";
     }
 
     if (!password) {
       newErrors.password = "Введите пароль";
     } else if (!passwordRegex.test(password)) {
-      newErrors.password =
-        "Минимум 8 символов, хотя бы 1 буква и 1 цифра";
+      newErrors.password = "Минимум 8 символов, хотя бы 1 буква и 1 цифра";
     }
 
     return newErrors;
@@ -58,13 +57,24 @@ export default function RegisterPage() {
     try {
       const { data } = await api.post("/auth/register", {
         name: name.trim(),
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         password,
       });
 
-      localStorage.setItem("accessToken", data.accessToken);
-      navigate("/profile");
-      window.location.reload();
+      const token = data.accessToken || data.token;
+
+      if (token) {
+        localStorage.setItem("token", token);
+
+        if (data.user) {
+          localStorage.setItem("user", JSON.stringify(data.user));
+        }
+
+        navigate("/profile");
+        window.location.reload();
+      } else {
+        navigate("/login");
+      }
     } catch (err: any) {
       setErrors({
         general: err?.response?.data?.message || "Ошибка регистрации",
@@ -76,6 +86,7 @@ export default function RegisterPage() {
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleRegister}>
         <h1>Регистрация</h1>
+
         <p className="auth-subtitle">
           Создайте аккаунт и получите доступ к теории, тестам и прогрессу
         </p>
@@ -113,13 +124,13 @@ export default function RegisterPage() {
         />
 
         <div className="auth-hint">
-  <p><strong>Требования к паролю:</strong></p>
-  <ul>
-    <li>Минимум 8 символов</li>
-    <li>Минимум одна буква</li>
-    <li>Минимум одна цифра</li>
-  </ul>
-</div>
+          <p><strong>Требования к паролю:</strong></p>
+          <ul>
+            <li>Минимум 8 символов</li>
+            <li>Минимум одна буква</li>
+            <li>Минимум одна цифра</li>
+          </ul>
+        </div>
 
         {errors.password && <div className="auth-error">{errors.password}</div>}
 

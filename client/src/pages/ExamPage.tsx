@@ -37,7 +37,7 @@ export default function ExamPage() {
   useEffect(() => {
     async function loadExam() {
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = localStorage.getItem("token");
 
         if (!token) {
           navigate("/login");

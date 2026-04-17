@@ -20,17 +20,22 @@ export default function LoginPage() {
         password,
       });
 
-      const { accessToken, user } = response.data;
+      console.log("LOGIN RESPONSE:", response.data); // 👈 важно
 
-      // ✅ ВОТ ЭТОГО У ТЕБЯ НЕ БЫЛО
-      localStorage.setItem("token", accessToken);
+      const token = response.data.accessToken || response.data.token;
+      const user = response.data.user;
+
+      if (!token) {
+        throw new Error("Токен не пришёл с сервера");
+      }
+
+      localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
 
       navigate("/");
-
-      // можно обновить страницу, чтобы меню сразу обновилось
       window.location.reload();
     } catch (err: any) {
+      console.error(err);
       setError(err?.response?.data?.message || "Ошибка входа");
     }
   };

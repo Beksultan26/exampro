@@ -149,18 +149,15 @@ export default function HomePage() {
         <h3 className="group-title">Прикладные дисциплины</h3>
         {renderCards(grouped.applied)}
       </div>
-      <footer className="site-footer">
-  <div className="footer-content">
-    <h3>ExamPrep PRO</h3>
-    <p>
-      Платформа для подготовки к экзаменам по IT-дисциплинам
-    </p>
-  </div>
 
-  <div className="footer-bottom">
-    © 2026 ExamPrep PRO
-  </div>
-</footer>
+      <footer className="site-footer">
+        <div className="footer-content">
+          <h3>ExamPrep PRO</h3>
+          <p>Платформа для подготовки к экзаменам по IT-дисциплинам</p>
+        </div>
+
+        <div className="footer-bottom">© 2026 ExamPrep PRO</div>
+      </footer>
     </div>
   );
 }
