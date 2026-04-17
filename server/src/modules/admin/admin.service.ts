@@ -1,6 +1,6 @@
 import { prisma } from "../../config/db";
 
-type CreateSubjectInput = {
+export type CreateSubjectInput = {
   title: string;
   slug: string;
   description?: string;
@@ -9,7 +9,7 @@ type CreateSubjectInput = {
   group: string;
 };
 
-type UpdateSubjectInput = {
+export type UpdateSubjectInput = {
   title: string;
   slug: string;
   description?: string;
@@ -18,8 +18,8 @@ type UpdateSubjectInput = {
   group: string;
 };
 
-type CreateQuestionInput = {
-  subjectSlug: string;
+export type CreateQuestionInput = {
+  subjectId: string;
   questionText: string;
   explanation?: string;
   options: {
@@ -28,21 +28,61 @@ type CreateQuestionInput = {
   }[];
 };
 
-type UpdateQuestionInput = {
+export type UpdateQuestionInput = {
   questionText: string;
   explanation?: string;
+  options: {
+    optionText: string;
+    isCorrect: boolean;
+  }[];
 };
 
-type CreateTopicInput = {
-  subjectSlug: string;
+export type CreateTopicInput = {
+  subjectId: string;
   title: string;
   content: string;
 };
 
-type UpdateTopicInput = {
+export type UpdateTopicInput = {
   title: string;
   content: string;
 };
+
+function normalizeText(value?: string) {
+  return value?.trim() || "";
+}
+
+function makeSlug(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-zA-Zа-яА-Я0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+function validateOptions(
+  options: { optionText: string; isCorrect: boolean }[]
+): void {
+  if (!Array.isArray(options) || options.length < 2) {
+    throw new Error("Нужно минимум 2 варианта ответа");
+  }
+
+  const cleaned = options.map((o) => ({
+    optionText: normalizeText(o.optionText),
+    isCorrect: !!o.isCorrect,
+  }));
+
+  if (cleaned.some((o) => !o.optionText)) {
+    throw new Error("Все варианты ответа должны быть заполнены");
+  }
+
+  const correctCount = cleaned.filter((o) => o.isCorrect).length;
+
+  if (correctCount !== 1) {
+    throw new Error("Должен быть ровно 1 правильный ответ");
+  }
+}
 
 export async function getAdminSubjects() {
   return prisma.subject.findMany({
@@ -59,8 +99,10 @@ export async function getAdminSubjects() {
 }
 
 export async function createAdminSubject(data: CreateSubjectInput) {
+  const slug = makeSlug(data.slug || data.title);
+
   const exists = await prisma.subject.findUnique({
-    where: { slug: data.slug },
+    where: { slug },
   });
 
   if (exists) {
@@ -69,37 +111,39 @@ export async function createAdminSubject(data: CreateSubjectInput) {
 
   return prisma.subject.create({
     data: {
-      title: data.title,
-      slug: data.slug,
-      description: data.description || "",
-      icon: data.icon || "📘",
-      color: data.color || "#06b6d4",
-      group: data.group,
+      title: normalizeText(data.title),
+      slug,
+      description: normalizeText(data.description) || null,
+      icon: normalizeText(data.icon) || null,
+      color: normalizeText(data.color) || null,
+      group: normalizeText(data.group),
     },
   });
 }
 
 export async function updateAdminSubject(id: string, data: UpdateSubjectInput) {
-  const exists = await prisma.subject.findFirst({
+  const slug = makeSlug(data.slug || data.title);
+
+  const existing = await prisma.subject.findFirst({
     where: {
-      slug: data.slug,
+      slug,
       NOT: { id },
     },
   });
 
-  if (exists) {
+  if (existing) {
     throw new Error("Другой предмет уже использует этот slug");
   }
 
   return prisma.subject.update({
     where: { id },
     data: {
-      title: data.title,
-      slug: data.slug,
-      description: data.description || "",
-      icon: data.icon || "📘",
-      color: data.color || "#06b6d4",
-      group: data.group,
+      title: normalizeText(data.title),
+      slug,
+      description: normalizeText(data.description) || null,
+      icon: normalizeText(data.icon) || null,
+      color: normalizeText(data.color) || null,
+      group: normalizeText(data.group),
     },
   });
 }
@@ -110,72 +154,38 @@ export async function deleteAdminSubject(id: string) {
   });
 }
 
-export async function getAdminQuestionsBySubject(subjectSlug: string) {
+export async function getAdminQuestions(subjectSlug: string) {
   const subject = await prisma.subject.findUnique({
     where: { slug: subjectSlug },
+  });
+
+  if (!subject) {
+    throw new Error("Предмет не найден");
+  }
+
+  return prisma.question.findMany({
+    where: { subjectId: subject.id },
+    orderBy: [{ order: "asc" }, { createdAt: "asc" as never }],
     include: {
-      questions: {
-        orderBy: { order: "asc" },
-        include: {
-          options: {
-            orderBy: { id: "asc" },
-          },
-        },
+      options: {
+        orderBy: { id: "asc" },
       },
     },
   });
-
-  if (!subject) {
-    throw new Error("Предмет не найден");
-  }
-
-  return subject;
 }
 
 export async function createAdminQuestion(data: CreateQuestionInput) {
-  const subject = await prisma.subject.findUnique({
-    where: { slug: data.subjectSlug },
-    include: {
-      questions: true,
-    },
-  });
-
-  if (!subject) {
-    throw new Error("Предмет не найден");
-  }
-
-  if (!data.questionText.trim()) {
-    throw new Error("Текст вопроса обязателен");
-  }
-
-  if (!Array.isArray(data.options) || data.options.length < 2) {
-    throw new Error("Нужно минимум 2 варианта ответа");
-  }
-
-  const filteredOptions = data.options.filter((o) => o.optionText.trim() !== "");
-
-  if (filteredOptions.length < 2) {
-    throw new Error("Нужно минимум 2 заполненных варианта");
-  }
-
-  const correctCount = filteredOptions.filter((o) => o.isCorrect).length;
-
-  if (correctCount !== 1) {
-    throw new Error("Должен быть ровно 1 правильный ответ");
-  }
-
-  const nextOrder = subject.questions.length + 1;
+  validateOptions(data.options);
 
   return prisma.question.create({
     data: {
-      subjectId: subject.id,
-      questionText: data.questionText,
-      explanation: data.explanation || null,
-      order: nextOrder,
+      subjectId: data.subjectId,
+      questionText: normalizeText(data.questionText),
+      explanation: normalizeText(data.explanation) || null,
       options: {
-        create: filteredOptions.map((option) => ({
-          optionText: option.optionText,
-          isCorrect: option.isCorrect,
+        create: data.options.map((option) => ({
+          optionText: normalizeText(option.optionText),
+          isCorrect: !!option.isCorrect,
         })),
       },
     },
@@ -186,12 +196,31 @@ export async function createAdminQuestion(data: CreateQuestionInput) {
 }
 
 export async function updateAdminQuestion(id: string, data: UpdateQuestionInput) {
-  return prisma.question.update({
-    where: { id },
-    data: {
-      questionText: data.questionText,
-      explanation: data.explanation || null,
-    },
+  validateOptions(data.options);
+
+  return prisma.$transaction(async (tx) => {
+    await tx.answerOption.deleteMany({
+      where: { questionId: id },
+    });
+
+    const updated = await tx.question.update({
+      where: { id },
+      data: {
+        questionText: normalizeText(data.questionText),
+        explanation: normalizeText(data.explanation) || null,
+        options: {
+          create: data.options.map((option) => ({
+            optionText: normalizeText(option.optionText),
+            isCorrect: !!option.isCorrect,
+          })),
+        },
+      },
+      include: {
+        options: true,
+      },
+    });
+
+    return updated;
   });
 }
 
@@ -201,62 +230,84 @@ export async function deleteAdminQuestion(id: string) {
   });
 }
 
-export async function getAdminTopicsBySubject(subjectSlug: string) {
+export async function getAdminTopics(subjectSlug: string) {
   const subject = await prisma.subject.findUnique({
     where: { slug: subjectSlug },
-    include: {
-      topics: {
-        orderBy: { order: "asc" },
-      },
-    },
   });
 
   if (!subject) {
     throw new Error("Предмет не найден");
   }
 
-  return subject;
+  return prisma.theoryTopic.findMany({
+    where: { subjectId: subject.id },
+    orderBy: [{ order: "asc" }, { title: "asc" }],
+  });
 }
 
 export async function createAdminTopic(data: CreateTopicInput) {
   const subject = await prisma.subject.findUnique({
-    where: { slug: data.subjectSlug },
-    include: {
-      topics: true,
-    },
+    where: { id: data.subjectId },
   });
 
   if (!subject) {
     throw new Error("Предмет не найден");
   }
 
-  if (!data.title.trim()) {
-    throw new Error("Название темы обязательно");
-  }
+  const slugBase = makeSlug(data.title);
+  let finalSlug = slugBase;
+  let counter = 1;
 
-  if (!data.content.trim()) {
-    throw new Error("Текст темы обязателен");
+  while (
+    await prisma.theoryTopic.findUnique({
+      where: { slug: finalSlug },
+    })
+  ) {
+    finalSlug = `${slugBase}-${counter}`;
+    counter += 1;
   }
-
-  const nextOrder = subject.topics.length + 1;
 
   return prisma.theoryTopic.create({
     data: {
-      subjectId: subject.id,
-      title: data.title,
-      slug: `${data.title.toLowerCase().trim().replace(/\s+/g, "-")}-${Date.now()}`,
-      content: data.content,
-      order: nextOrder,
+      subjectId: data.subjectId,
+      title: normalizeText(data.title),
+      slug: finalSlug,
+      content: normalizeText(data.content),
     },
   });
 }
 
 export async function updateAdminTopic(id: string, data: UpdateTopicInput) {
+  const current = await prisma.theoryTopic.findUnique({
+    where: { id },
+  });
+
+  if (!current) {
+    throw new Error("Тема не найдена");
+  }
+
+  const slugBase = makeSlug(data.title);
+  let finalSlug = slugBase;
+  let counter = 1;
+
+  while (
+    await prisma.theoryTopic.findFirst({
+      where: {
+        slug: finalSlug,
+        NOT: { id },
+      },
+    })
+  ) {
+    finalSlug = `${slugBase}-${counter}`;
+    counter += 1;
+  }
+
   return prisma.theoryTopic.update({
     where: { id },
     data: {
-      title: data.title,
-      content: data.content,
+      title: normalizeText(data.title),
+      slug: finalSlug,
+      content: normalizeText(data.content),
     },
   });
 }

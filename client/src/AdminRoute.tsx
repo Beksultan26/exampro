@@ -1,7 +1,7 @@
 import { Navigate, Outlet } from "react-router-dom";
 
 export default function AdminRoute() {
-  const token = localStorage.getItem("accessToken");
+  const token = localStorage.getItem("token");
   const userRaw = localStorage.getItem("user");
 
   if (!token || !userRaw) {

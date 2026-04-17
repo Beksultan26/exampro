@@ -20,16 +20,19 @@ const router = Router();
 
 router.use(authMiddleware, adminMiddleware);
 
+// Subjects
 router.get("/subjects", getAdminSubjectsController);
 router.post("/subjects", createAdminSubjectController);
 router.put("/subjects/:id", updateAdminSubjectController);
 router.delete("/subjects/:id", deleteAdminSubjectController);
 
+// Questions
 router.get("/subjects/:slug/questions", getAdminQuestionsController);
 router.post("/questions", createAdminQuestionController);
 router.put("/questions/:id", updateAdminQuestionController);
 router.delete("/questions/:id", deleteAdminQuestionController);
 
+// Topics
 router.get("/subjects/:slug/topics", getAdminTopicsController);
 router.post("/topics", createAdminTopicController);
 router.put("/topics/:id", updateAdminTopicController);
