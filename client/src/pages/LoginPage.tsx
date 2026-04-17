@@ -8,12 +8,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
 
     try {
       const normalizedEmail = email.trim().toLowerCase();
@@ -23,29 +20,18 @@ export default function LoginPage() {
         password,
       });
 
-      const token = response.data.accessToken || response.data.token;
-      localStorage.setItem("token", token);
-      navigate("/");
-      const user = response.data.user;
+      const { accessToken, user } = response.data;
 
-      if (!token) {
-        throw new Error("Токен не получен");
-      }
-
-      localStorage.setItem("token", token);
-
-      if (user) {
-        localStorage.setItem("user", JSON.stringify(user));
-      }
-
-      sessionStorage.removeItem("pending2faEmail");
+      // ✅ ВОТ ЭТОГО У ТЕБЯ НЕ БЫЛО
+      localStorage.setItem("token", accessToken);
+      localStorage.setItem("user", JSON.stringify(user));
 
       navigate("/");
+
+      // можно обновить страницу, чтобы меню сразу обновилось
+      window.location.reload();
     } catch (err: any) {
-      console.error("LOGIN ERROR:", err);
       setError(err?.response?.data?.message || "Ошибка входа");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -60,8 +46,6 @@ export default function LoginPage() {
 
         <input
           type="email"
-          name="email"
-          autoComplete="email"
           placeholder="Введите email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -70,8 +54,6 @@ export default function LoginPage() {
 
         <input
           type="password"
-          name="password"
-          autoComplete="current-password"
           placeholder="Введите пароль"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -79,14 +61,10 @@ export default function LoginPage() {
         />
 
         <div className="auth-row">
-          <Link to="/forgot-password" className="auth-forgot-link">
-            Забыли пароль?
-          </Link>
+          <Link to="/forgot-password">Забыли пароль?</Link>
         </div>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Входим..." : "Войти"}
-        </button>
+        <button type="submit">Войти</button>
 
         {error && <div className="auth-error">{error}</div>}
 
