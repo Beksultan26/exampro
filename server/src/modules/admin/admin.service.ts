@@ -164,14 +164,14 @@ export async function getAdminQuestions(subjectSlug: string) {
   }
 
   return prisma.question.findMany({
-    where: { subjectId: subject.id },
-    orderBy: [{ order: "asc" }, { createdAt: "asc" as never }],
-    include: {
-      options: {
-        orderBy: { id: "asc" },
-      },
+  where: { subjectId: subject.id },
+  orderBy: { order: "asc" },
+  include: {
+    options: {
+      orderBy: { id: "asc" },
     },
-  });
+  },
+});
 }
 
 export async function createAdminQuestion(data: CreateQuestionInput) {
