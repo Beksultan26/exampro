@@ -13,11 +13,16 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const token = localStorage.getItem("accessToken");
-  const [user, setUser] = useState<Me | null>(null);
+  const [user, setUser] = useState<Me | null>(() => {
+    const savedUser = localStorage.getItem("user");
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+
     const loadMe = async () => {
       if (!token) {
         setUser(null);
@@ -27,13 +32,16 @@ export default function Layout() {
       try {
         const { data } = await api.get("/auth/me");
         setUser(data);
+        localStorage.setItem("user", JSON.stringify(data));
       } catch {
         setUser(null);
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
       }
     };
 
     loadMe();
-  }, [token]);
+  }, []);
 
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
@@ -41,12 +49,15 @@ export default function Layout() {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
     sessionStorage.clear();
     setUser(null);
     navigate("/login");
     window.location.reload();
   };
+
+  const isLoggedIn = !!localStorage.getItem("token");
 
   return (
     <div className="app-shell">
@@ -55,7 +66,6 @@ export default function Layout() {
           Exam<span>Pro</span>
         </Link>
 
-        {/* бургер */}
         <button className="burger" onClick={() => setMenuOpen(!menuOpen)}>
           ☰
         </button>
@@ -65,32 +75,35 @@ export default function Layout() {
             Главная
           </Link>
 
-          <Link className="nav-btn" to="/theory">
+          <Link className={`nav-btn ${isActive("/theory") ? "active" : ""}`} to="/theory">
             Теория
           </Link>
 
-          <Link className="nav-btn" to="/tests">
+          <Link className={`nav-btn ${isActive("/tests") ? "active" : ""}`} to="/tests">
             Тесты
           </Link>
 
           {user?.role === "ADMIN" && (
-            <Link className="nav-btn" to="/admin">
+            <Link className={`nav-btn ${isActive("/admin") ? "active" : ""}`} to="/admin">
               Админка
             </Link>
           )}
 
-          {!token ? (
+          {!isLoggedIn ? (
             <>
-              <Link className="nav-btn" to="/login">
+              <Link className={`nav-btn ${isActive("/login") ? "active" : ""}`} to="/login">
                 Вход
               </Link>
-              <Link className="nav-btn nav-outline" to="/register">
+              <Link
+                className={`nav-btn nav-outline ${isActive("/register") ? "active" : ""}`}
+                to="/register"
+              >
                 Регистрация
               </Link>
             </>
           ) : (
             <>
-              <Link className="nav-btn" to="/profile">
+              <Link className={`nav-btn ${isActive("/profile") ? "active" : ""}`} to="/profile">
                 Профиль
               </Link>
               <button className="nav-btn nav-logout" onClick={handleLogout}>
