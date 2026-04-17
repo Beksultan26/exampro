@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Link,
   useNavigate,
@@ -30,7 +30,6 @@ export default function QuizPage() {
   const [searchParams] = useSearchParams();
 
   const mode = searchParams.get("mode") || "normal";
-  const isExamMode = mode === "exam";
   const isMistakesMode = mode === "mistakes";
 
   const [subject, setSubject] = useState<QuizSubject | null>(null);
@@ -39,12 +38,11 @@ export default function QuizPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [timeLeft, setTimeLeft] = useState(600);
 
   useEffect(() => {
     async function loadQuiz() {
       try {
-        const token = localStorage.getItem("token"); // ✅ FIX
+        const token = localStorage.getItem("token");
 
         if (!token) {
           navigate("/login");
@@ -66,33 +64,8 @@ export default function QuizPage() {
     loadQuiz();
   }, [slug, mode, navigate]);
 
-  useEffect(() => {
-    if (!isExamMode) return;
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          handleSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [isExamMode]);
-
-  const question = useMemo(() => {
-    if (!subject) return null;
-    return subject.questions[currentIndex] ?? null;
-  }, [subject, currentIndex]);
-
-
   function handleSelect(optionId: string) {
     if (!question) return;
-
-    if (isExamMode && answers[question.id]) return;
 
     setAnswers((prev) => ({
       ...prev,
@@ -108,8 +81,6 @@ export default function QuizPage() {
   }
 
   function handlePrev() {
-    if (isExamMode) return;
-
     if (currentIndex > 0) {
       setCurrentIndex((prev) => prev - 1);
     }
@@ -118,7 +89,7 @@ export default function QuizPage() {
   async function handleSubmit() {
     if (!subject) return;
 
-    const token = localStorage.getItem("token"); // ✅ FIX
+    const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login");
       return;
@@ -141,65 +112,119 @@ export default function QuizPage() {
 
       navigate(`/result/${data.id}`);
     } catch (err: any) {
-      alert(err?.response?.data?.message || "Ошибка отправки теста");
+      setError(err?.response?.data?.message || "Ошибка отправки теста");
     } finally {
       setSubmitting(false);
     }
   }
 
-  function formatTime(sec: number) {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  }
+  const question = subject?.questions[currentIndex] ?? null;
+  const totalQuestions = subject?.questions.length ?? 0;
+  const currentQuestionNumber = currentIndex + 1;
+  const progressPercent =
+    totalQuestions > 0 ? Math.round((currentQuestionNumber / totalQuestions) * 100) : 0;
 
   if (loading) return <p>Загрузка...</p>;
   if (error) return <p style={{ color: "crimson" }}>{error}</p>;
   if (!subject || !question) return <p>Тест не найден</p>;
 
   return (
-    <div className="quiz-card">
-      <Link to={`/subject/${subject.slug}`} className="back-link">
-        ← Назад к предмету
-      </Link>
+    <div className="quiz-page-wrap">
+      <div className="quiz-card">
+        <Link to={`/subject/${subject.slug}`} className="back-link">
+          ← Назад к предмету
+        </Link>
 
-      <h1 className="page-heading">
-        {isExamMode
-          ? `Экзамен: ${subject.title}`
-          : isMistakesMode
-          ? `Работа над ошибками: ${subject.title}`
-          : `Тест: ${subject.title}`}
-      </h1>
+        <div className="quiz-topbar">
+          <div>
+            <h1 className="page-heading" style={{ marginBottom: 8 }}>
+              {isMistakesMode ? `Работа над ошибками: ${subject.title}` : `Тест: ${subject.title}`}
+            </h1>
+            <p className="quiz-subtitle">
+              Вопрос {currentQuestionNumber} из {totalQuestions}
+            </p>
+          </div>
 
-      {isExamMode && (
-        <div className="exam-timer">⏱ Осталось: {formatTime(timeLeft)}</div>
-      )}
+          <div className="quiz-counter-badge">{progressPercent}%</div>
+        </div>
 
-      <div className="quiz-question">{question.questionText}</div>
+        <div className="quiz-progress-bar">
+          <div
+            className="quiz-progress-fill"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
 
-      <div className="quiz-options">
-        {question.options.map((option) => (
+        <div className="quiz-dots">
+          {subject.questions.map((q, index) => {
+            const isCurrent = index === currentIndex;
+            const isAnswered = Boolean(answers[q.id]);
+
+            return (
+              <button
+                key={q.id}
+                type="button"
+                className={`quiz-dot ${isCurrent ? "current" : ""} ${
+                  isAnswered ? "answered" : ""
+                }`}
+                onClick={() => setCurrentIndex(index)}
+              >
+                {index + 1}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="quiz-question-box">
+          <div className="quiz-question-label">Вопрос</div>
+          <div className="quiz-question">{question.questionText}</div>
+        </div>
+
+        <div className="quiz-options">
+          {question.options.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={`quiz-option ${
+                answers[question.id] === option.id ? "selected" : ""
+              }`}
+              onClick={() => handleSelect(option.id)}
+            >
+              {option.optionText}
+            </button>
+          ))}
+        </div>
+
+        <div className="quiz-actions">
           <button
-            key={option.id}
-            className={`quiz-option ${
-              answers[question.id] === option.id ? "selected" : ""
-            }`}
-            onClick={() => handleSelect(option.id)}
+            type="button"
+            className="btn-outline"
+            onClick={handlePrev}
+            disabled={currentIndex === 0}
           >
-            {option.optionText}
+            Назад
           </button>
-        ))}
-      </div>
 
-      <div className="quiz-actions">
-        <button onClick={handlePrev}>Назад</button>
-        {currentIndex < subject.questions.length - 1 ? (
-          <button onClick={handleNext}>Далее</button>
-        ) : (
-          <button onClick={handleSubmit}>
-            {submitting ? "Отправка..." : "Завершить"}
-          </button>
-        )}
+          {currentIndex < totalQuestions - 1 ? (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleNext}
+              disabled={!answers[question.id]}
+            >
+              Далее
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleSubmit}
+              disabled={submitting || !answers[question.id]}
+            >
+              {submitting ? "Отправка..." : "Завершить"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
