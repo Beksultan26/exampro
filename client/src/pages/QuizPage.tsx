@@ -64,6 +64,14 @@ export default function QuizPage() {
     loadQuiz();
   }, [slug, mode, navigate]);
 
+  const question = subject?.questions[currentIndex] ?? null;
+  const totalQuestions = subject?.questions.length ?? 0;
+  const currentQuestionNumber = currentIndex + 1;
+  const progressPercent =
+    totalQuestions > 0
+      ? Math.round((currentQuestionNumber / totalQuestions) * 100)
+      : 0;
+
   function handleSelect(optionId: string) {
     if (!question) return;
 
@@ -118,12 +126,6 @@ export default function QuizPage() {
     }
   }
 
-  const question = subject?.questions[currentIndex] ?? null;
-  const totalQuestions = subject?.questions.length ?? 0;
-  const currentQuestionNumber = currentIndex + 1;
-  const progressPercent =
-    totalQuestions > 0 ? Math.round((currentQuestionNumber / totalQuestions) * 100) : 0;
-
   if (loading) return <p>Загрузка...</p>;
   if (error) return <p style={{ color: "crimson" }}>{error}</p>;
   if (!subject || !question) return <p>Тест не найден</p>;
@@ -137,8 +139,10 @@ export default function QuizPage() {
 
         <div className="quiz-topbar">
           <div>
-            <h1 className="page-heading" style={{ marginBottom: 8 }}>
-              {isMistakesMode ? `Работа над ошибками: ${subject.title}` : `Тест: ${subject.title}`}
+            <h1 className="page-heading quiz-title">
+              {isMistakesMode
+                ? `Работа над ошибками: ${subject.title}`
+                : `Тест: ${subject.title}`}
             </h1>
             <p className="quiz-subtitle">
               Вопрос {currentQuestionNumber} из {totalQuestions}
