@@ -8,32 +8,44 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("LOGIN CLICKED");
+    setError("");
+    setLoading(true);
 
     try {
       const normalizedEmail = email.trim().toLowerCase();
-
-      console.log("BEFORE REQUEST", {
-        url: "/auth/login",
-        email: normalizedEmail,
-      });
 
       const response = await api.post("/auth/login", {
         email: normalizedEmail,
         password,
       });
 
-      console.log("AFTER REQUEST", response.data);
+      const token = response.data.accessToken || response.data.token;
+      localStorage.setItem("token", token);
+      navigate("/");
+      const user = response.data.user;
 
-      sessionStorage.setItem("pending2faEmail", normalizedEmail);
-      navigate("/verify-otp");
+      if (!token) {
+        throw new Error("Токен не получен");
+      }
+
+      localStorage.setItem("token", token);
+
+      if (user) {
+        localStorage.setItem("user", JSON.stringify(user));
+      }
+
+      sessionStorage.removeItem("pending2faEmail");
+
+      navigate("/");
     } catch (err: any) {
-      console.error("LOGIN ERROR FULL:", err);
-      console.error("LOGIN ERROR RESPONSE:", err?.response?.data);
+      console.error("LOGIN ERROR:", err);
       setError(err?.response?.data?.message || "Ошибка входа");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -72,7 +84,9 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        <button type="submit">Войти и получить код</button>
+        <button type="submit" disabled={loading}>
+          {loading ? "Входим..." : "Войти"}
+        </button>
 
         {error && <div className="auth-error">{error}</div>}
 
