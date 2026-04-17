@@ -54,22 +54,42 @@ export default function ResultPage() {
     return Math.round((attempt.score / attempt.totalQuestions) * 100);
   }, [attempt]);
 
+  const resultLabel = useMemo(() => {
+    if (percent >= 85) return "Отличный результат";
+    if (percent >= 60) return "Хороший результат";
+    if (percent >= 40) return "Есть над чем поработать";
+    return "Нужно повторить тему";
+  }, [percent]);
+
   if (loading) return <p>Загрузка...</p>;
   if (error) return <p style={{ color: "crimson" }}>{error}</p>;
   if (!attempt) return <p>Результат не найден</p>;
 
   return (
-    <div className="result-grid">
-      <div className="result-card">
-        <h1 style={{ marginTop: 0 }}>Результат теста</h1>
-        <h2>{attempt.subject.title}</h2>
+    <div className="result-page">
+      <div className="result-hero">
+        <div className="result-badge">{resultLabel}</div>
 
-        <div className="result-score">
-          {attempt.score} / {attempt.totalQuestions}
+        <h1 className="result-title">Результат теста</h1>
+        <h2 className="result-subject">{attempt.subject.title}</h2>
+
+        <div className="result-circle">
+          <span>{percent}%</span>
         </div>
 
-        <p className="page-subtext">Процент выполнения: {percent}%</p>
-        <p className="page-subtext">Ошибок: {wrongAnswersCount}</p>
+        <div className="result-summary">
+          <div className="result-stat">
+            <span>Правильных ответов</span>
+            <strong>
+              {attempt.score} / {attempt.totalQuestions}
+            </strong>
+          </div>
+
+          <div className="result-stat">
+            <span>Ошибок</span>
+            <strong>{wrongAnswersCount}</strong>
+          </div>
+        </div>
 
         <div className="result-actions">
           <Link to={`/subject/${attempt.subject.slug}`} className="btn-outline">
@@ -91,32 +111,37 @@ export default function ResultPage() {
         </div>
       </div>
 
-      {attempt.answers.map((answer, index) => (
-        <div
-          key={answer.id}
-          className={`result-card result-answer ${
-            answer.isCorrect ? "correct" : "wrong"
-          }`}
-        >
-          <h3 style={{ marginTop: 0 }}>
-            {index + 1}. {answer.question.questionText}
-          </h3>
+      <div className="result-details">
+        <h2>Разбор ответов</h2>
 
-          <p>
-            <strong>Ваш ответ:</strong> {answer.selectedOption.optionText}
-          </p>
+        <div className="result-list">
+          {attempt.answers.map((answer, index) => (
+            <div
+              key={answer.id}
+              className={`result-item ${answer.isCorrect ? "correct" : "wrong"}`}
+            >
+              <div className="result-item-top">
+                <div className="result-number">{index + 1}</div>
+                <div className="result-question-block">
+                  <h3>{answer.question.questionText}</h3>
+                  <p className="result-user-answer">
+                    <strong>Ваш ответ:</strong> {answer.selectedOption.optionText}
+                  </p>
+                  <p className={`result-status ${answer.isCorrect ? "ok" : "bad"}`}>
+                    {answer.isCorrect ? "Верно" : "Неверно"}
+                  </p>
+                </div>
+              </div>
 
-          <p>
-            <strong>Статус:</strong> {answer.isCorrect ? "Верно" : "Неверно"}
-          </p>
-
-          {answer.question.explanation && (
-            <div className="quiz-explanation">
-              <strong>Пояснение:</strong> {answer.question.explanation}
+              {answer.question.explanation && (
+                <div className="result-explanation">
+                  <strong>Пояснение:</strong> {answer.question.explanation}
+                </div>
+              )}
             </div>
-          )}
+          ))}
         </div>
-      ))}
+      </div>
     </div>
   );
 }
