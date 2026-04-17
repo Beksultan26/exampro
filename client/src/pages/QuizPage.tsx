@@ -88,10 +88,6 @@ export default function QuizPage() {
     return subject.questions[currentIndex] ?? null;
   }, [subject, currentIndex]);
 
-  const progress = useMemo(() => {
-    if (!subject || subject.questions.length === 0) return 0;
-    return ((currentIndex + 1) / subject.questions.length) * 100;
-  }, [subject, currentIndex]);
 
   function handleSelect(optionId: string) {
     if (!question) return;
