@@ -19,6 +19,7 @@ model User {
   email        String        @unique
   passwordHash String
   role         Role          @default(STUDENT)
+  avatarUrl    String?
   createdAt    DateTime      @default(now())
 
   attempts     QuizAttempt[]

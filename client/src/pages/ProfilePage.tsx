@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
 import { Link } from "react-router-dom";
 
@@ -7,6 +7,7 @@ type User = {
   name: string;
   email: string;
   role: string;
+  avatarUrl?: string | null;
   createdAt: string;
 };
 
@@ -25,12 +26,18 @@ export default function ProfilePage() {
   const [user, setUser] = useState<User | null>(null);
   const [history, setHistory] = useState<Attempt[]>([]);
   const [error, setError] = useState("");
+  const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     async function loadProfile() {
       try {
         const userRes = await api.get("/auth/me");
         setUser(userRes.data);
+        setName(userRes.data.name);
 
         const historyRes = await api.get("/quiz/history");
         setHistory(historyRes.data);
@@ -42,14 +49,6 @@ export default function ProfilePage() {
     loadProfile();
   }, []);
 
-  function handleLogout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    sessionStorage.clear();
-    window.location.href = "/login";
-  }
-
-  // 📊 статистика
   const stats = useMemo(() => {
     if (history.length === 0) {
       return {
@@ -61,44 +60,144 @@ export default function ProfilePage() {
       };
     }
 
-    let totalScore = 0;
-    let totalQuestions = 0;
+    let totalPercent = 0;
     let best = 0;
+    let correct = 0;
+    let total = 0;
 
     history.forEach((a) => {
-      const percent = (a.score / a.totalQuestions) * 100;
-      totalScore += percent;
-      totalQuestions += a.totalQuestions;
+      const percent = a.totalQuestions ? (a.score / a.totalQuestions) * 100 : 0;
+      totalPercent += percent;
       if (percent > best) best = percent;
+      correct += a.score;
+      total += a.totalQuestions;
     });
 
     return {
       attempts: history.length,
-      avg: Math.round(totalScore / history.length),
+      avg: Math.round(totalPercent / history.length),
       best: Math.round(best),
-      correct: history.reduce((s, a) => s + a.score, 0),
-      total: totalQuestions,
+      correct,
+      total,
     };
   }, [history]);
 
-  if (error) return <p style={{ color: "crimson" }}>{error}</p>;
-  if (!user) return <p>Загрузка...</p>;
+  async function handleSaveProfile() {
+    try {
+      setSaving(true);
+      const { data } = await api.put("/profile/update", { name });
+      setUser(data);
+      localStorage.setItem("user", JSON.stringify(data));
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Ошибка обновления профиля");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploading(true);
+
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      const { data } = await api.post("/profile/avatar", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      setUser(data);
+      localStorage.setItem("user", JSON.stringify(data));
+    } catch (err: any) {
+      setError(err?.response?.data?.message || "Ошибка загрузки фото");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    sessionStorage.clear();
+    window.location.href = "/login";
+  }
+
+  if (error) {
+    return <p style={{ color: "crimson" }}>{error}</p>;
+  }
+
+  if (!user) {
+    return <p>Загрузка...</p>;
+  }
 
   return (
     <div className="profile-page">
-      {/* 👤 профиль */}
-      <div className="profile-card">
-        <h1>Профиль</h1>
-        <p><strong>Имя:</strong> {user.name}</p>
-        <p><strong>Email:</strong> {user.email}</p>
-        <p><strong>Роль:</strong> {user.role}</p>
+      <div className="profile-card profile-top">
+        <div className="profile-header">
+          <div className="profile-avatar-wrap">
+            {user.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt="avatar"
+                className="profile-avatar"
+              />
+            ) : (
+              <div className="profile-avatar profile-avatar-placeholder">
+                {user.name?.charAt(0).toUpperCase()}
+              </div>
+            )}
 
-        <button className="btn-danger" onClick={handleLogout}>
-          Выйти
-        </button>
+            <button
+              className="btn-outline"
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploading ? "Загрузка..." : "Изменить фото"}
+            </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={handleAvatarChange}
+            />
+          </div>
+
+          <div className="profile-info-block">
+            <h1>Профиль</h1>
+
+            <label className="profile-label">Имя</label>
+            <input
+              className="profile-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+
+            <label className="profile-label">Email</label>
+            <div className="profile-static">{user.email}</div>
+
+            <label className="profile-label">Роль</label>
+            <div className="profile-static">{user.role}</div>
+
+            <div className="profile-buttons">
+              <button className="btn-primary" onClick={handleSaveProfile}>
+                {saving ? "Сохранение..." : "Сохранить"}
+              </button>
+
+              <button className="btn-danger" onClick={handleLogout}>
+                Выйти
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* 📊 статистика */}
       <div className="stats-grid">
         <div className="stat-card">
           <span>Попыток</span>
@@ -121,7 +220,6 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* 📜 история */}
       <div className="history-card">
         <h2>История попыток</h2>
 
@@ -141,11 +239,7 @@ export default function ProfilePage() {
                   className="history-item"
                 >
                   <strong>{attempt.subject.title}</strong>
-
-                  <div>
-                    Результат: {attempt.score} / {attempt.totalQuestions}
-                  </div>
-
+                  <div>Результат: {attempt.score} / {attempt.totalQuestions}</div>
                   <div className="history-meta">
                     {percent}% • {new Date(attempt.createdAt).toLocaleString()}
                   </div>

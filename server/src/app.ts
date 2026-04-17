@@ -12,6 +12,7 @@ import theoryRoutes from "./modules/theory/theory.routes";
 import quizRoutes from "./modules/quiz/quiz.routes";
 import adminRoutes from "./modules/admin/admin.routes";
 import { env } from "./config/env";
+import profileRoutes from "./modules/profile/profile.routes";
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use(
 );
 
 app.use(helmet());
+app.use("/api/profile", profileRoutes);
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

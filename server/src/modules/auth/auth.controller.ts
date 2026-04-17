@@ -303,6 +303,7 @@ export async function meController(req: Request, res: Response) {
         name: true,
         email: true,
         role: true,
+        avatarUrl: true,
         createdAt: true,
       },
     });
