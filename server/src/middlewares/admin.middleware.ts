@@ -1,17 +1,10 @@
-import { Response, NextFunction } from "express";
-import { AuthRequest } from "./auth.middleware";
+import { Request, Response, NextFunction } from "express";
 
-export function adminMiddleware(
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) {
-  if (!req.user) {
-    return res.status(401).json({ message: "Не авторизован" });
-  }
+export function adminMiddleware(req: Request, res: Response, next: NextFunction) {
+  const user = (req as any).user;
 
-  if (req.user.role !== "ADMIN") {
-    return res.status(403).json({ message: "Доступ только для администратора" });
+  if (!user || user.role !== "ADMIN") {
+    return res.status(403).json({ message: "Доступ запрещён" });
   }
 
   next();

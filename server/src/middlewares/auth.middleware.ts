@@ -1,32 +1,30 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { env } from "../config/env";
 
-export interface AuthRequest extends Request {
-  user?: {
-    userId: string;
-    role: string;
-  };
-}
+type JwtPayload = {
+  userId: string;
+  email: string;
+  role: string;
+};
 
-export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Не авторизован" });
-  }
-
-  const token = authHeader.split(" ")[1];
-
+export function authMiddleware(req: Request, res: Response, next: NextFunction) {
   try {
-    const decoded = jwt.verify(token, env.accessSecret) as {
-      userId: string;
-      role: string;
-    };
+    const authHeader = req.headers.authorization;
 
-    req.user = decoded;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Не авторизован" });
+    }
+
+    const token = authHeader.split(" ")[1];
+
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_ACCESS_SECRET as string
+    ) as JwtPayload;
+
+    (req as any).user = decoded;
     next();
   } catch {
-    return res.status(401).json({ message: "Неверный токен" });
+    return res.status(401).json({ message: "Недействительный токен" });
   }
 }

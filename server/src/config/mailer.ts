@@ -1,28 +1,35 @@
-import nodemailer from "nodemailer";
+import sgMail from "@sendgrid/mail";
+import { env } from "./env";
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 587),
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+if (env.sendgridApiKey) {
+  sgMail.setApiKey(env.sendgridApiKey);
+}
 
-export async function sendPasswordResetEmail(email: string, code: string) {
-  await transporter.sendMail({
-    from: `"ExamPrep PRO" <${process.env.SMTP_USER}>`,
-    to: email,
-    subject: "Сброс пароля — ExamPrep PRO",
+export async function sendPasswordResetEmail(to: string, code: string) {
+  if (!env.sendgridApiKey) {
+    throw new Error("SENDGRID_API_KEY is not set");
+  }
+
+  if (!env.mailFrom) {
+    throw new Error("MAIL_FROM is not set");
+  }
+
+  await sgMail.send({
+    to,
+    from: {
+      email: env.mailFrom,
+      name: env.mailFromName,
+    },
+    subject: "Сброс пароля ExamPro",
     html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+      <div style="font-family: Arial, sans-serif; color: #111;">
         <h2>Сброс пароля</h2>
-        <p>Ваш код для сброса пароля:</p>
-        <div style="font-size: 28px; font-weight: bold; letter-spacing: 4px; margin: 16px 0;">
+        <p>Вы запросили код для сброса пароля.</p>
+        <p>Ваш код:</p>
+        <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px; margin: 16px 0;">
           ${code}
         </div>
-        <p>Код действует ограниченное время.</p>
+        <p>Код действует 10 минут.</p>
       </div>
     `,
   });
