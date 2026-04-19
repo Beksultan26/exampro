@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { env } from "../config/env";
 
 type JwtPayload = {
   userId: string;
@@ -7,24 +8,40 @@ type JwtPayload = {
   role: string;
 };
 
-export function authMiddleware(req: Request, res: Response, next: NextFunction) {
+export interface AuthRequest extends Request {
+  user?: JwtPayload;
+}
+
+export function authMiddleware(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
   try {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Не авторизован" });
+      return res.status(401).json({
+        message: "Не авторизован",
+      });
     }
 
     const token = authHeader.split(" ")[1];
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_ACCESS_SECRET as string
-    ) as JwtPayload;
+    if (!token) {
+      return res.status(401).json({
+        message: "Токен отсутствует",
+      });
+    }
 
-    (req as any).user = decoded;
+    const decoded = jwt.verify(token, env.accessSecret) as JwtPayload;
+
+    req.user = decoded;
+
     next();
-  } catch {
-    return res.status(401).json({ message: "Недействительный токен" });
+  } catch (error) {
+    return res.status(401).json({
+      message: "Неверный или истекший токен",
+    });
   }
 }
