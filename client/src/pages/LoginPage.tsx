@@ -8,11 +8,15 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError("");
 
     try {
+      setLoading(true);
+
       const normalizedEmail = email.trim().toLowerCase();
 
       const response = await api.post("/auth/login", {
@@ -20,13 +24,25 @@ export default function LoginPage() {
         password,
       });
 
-      console.log("LOGIN RESPONSE:", response.data); // 👈 важно
+      console.log("LOGIN RESPONSE:", response.data);
 
+      // 🔥 ВАЖНО: теперь проверяем OTP
+      if (response.data?.requiresOtp) {
+        sessionStorage.setItem(
+          "pendingLoginEmail",
+          response.data.email
+        );
+
+        navigate("/verify-login-otp");
+        return;
+      }
+
+      // fallback (если вдруг сервер вернёт токен напрямую)
       const token = response.data.accessToken || response.data.token;
       const user = response.data.user;
 
       if (!token) {
-        throw new Error("Токен не пришёл с сервера");
+        throw new Error("Не удалось начать подтверждение входа");
       }
 
       localStorage.setItem("token", token);
@@ -37,6 +53,8 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error(err);
       setError(err?.response?.data?.message || "Ошибка входа");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -69,7 +87,9 @@ export default function LoginPage() {
           <Link to="/forgot-password">Забыли пароль?</Link>
         </div>
 
-        <button type="submit">Войти</button>
+        <button type="submit" disabled={loading}>
+          {loading ? "Проверка..." : "Войти"}
+        </button>
 
         {error && <div className="auth-error">{error}</div>}
 

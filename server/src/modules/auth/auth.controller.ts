@@ -174,20 +174,20 @@ export async function verifyLoginOtpController(req: Request, res: Response) {
       });
     }
 
-    const loginOtp = await prisma.loginOtp.findFirst({
+    const otp = await prisma.loginOtp.findFirst({
       where: { email: normalizedEmail },
       orderBy: { createdAt: "desc" },
     });
 
-    if (!loginOtp) {
+    if (!otp) {
       return res.status(400).json({
         message: "Код входа не найден",
       });
     }
 
-    if (loginOtp.expiresAt.getTime() < Date.now()) {
+    if (otp.expiresAt.getTime() < Date.now()) {
       await prisma.loginOtp.delete({
-        where: { id: loginOtp.id },
+        where: { id: otp.id },
       });
 
       return res.status(400).json({
@@ -195,13 +195,13 @@ export async function verifyLoginOtpController(req: Request, res: Response) {
       });
     }
 
-    const isCodeValid = await bcrypt.compare(String(code), loginOtp.codeHash);
+    const isValid = await bcrypt.compare(String(code), otp.codeHash);
 
-    if (!isCodeValid) {
+    if (!isValid) {
       await prisma.loginOtp.update({
-        where: { id: loginOtp.id },
+        where: { id: otp.id },
         data: {
-          attempts: loginOtp.attempts + 1,
+          attempts: otp.attempts + 1,
         },
       });
 
@@ -210,14 +210,14 @@ export async function verifyLoginOtpController(req: Request, res: Response) {
       });
     }
 
+    await prisma.loginOtp.delete({
+      where: { id: otp.id },
+    });
+
     const accessToken = signAccessToken({
       id: user.id,
       email: user.email,
       role: user.role,
-    });
-
-    await prisma.loginOtp.delete({
-      where: { id: loginOtp.id },
     });
 
     return res.status(200).json({

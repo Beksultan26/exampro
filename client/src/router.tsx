@@ -12,6 +12,7 @@ import QuizPage from "./pages/QuizPage";
 import ResultPage from "./pages/ResultPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import VerifyLoginOtpPage from "./pages/VerifyLoginOtpPage";
 import TheoryPage from "./pages/TheoryPage";
 import TestsPage from "./pages/TestsPage";
 import ExamPage from "./pages/ExamPage";
@@ -31,26 +32,20 @@ export const router = createBrowserRouter([
       { path: "register", element: <RegisterPage /> },
       { path: "forgot-password", element: <ForgotPasswordPage /> },
       { path: "reset-password", element: <ResetPasswordPage /> },
+      { path: "verify-login-otp", element: <VerifyLoginOtpPage /> },
 
       { path: "exam", element: <ExamPage /> },
 
-      // 👤 обычный пользователь (только авторизованные)
       {
         element: <ProtectedRoute />,
-        children: [
-          { path: "profile", element: <ProfilePage /> },
-        ],
+        children: [{ path: "profile", element: <ProfilePage /> }],
       },
 
-      // 👑 только админ
       {
         element: <ProtectedRoute adminOnly />,
-        children: [
-          { path: "admin", element: <AdminPage /> },
-        ],
+        children: [{ path: "admin", element: <AdminPage /> }],
       },
 
-      // открытые страницы
       { path: "subject/:slug", element: <SubjectPage /> },
       { path: "topic/:slug", element: <TopicPage /> },
       { path: "quiz/:slug", element: <QuizPage /> },
