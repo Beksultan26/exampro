@@ -3,7 +3,10 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { prisma } from "../../config/db";
 import { env } from "../../config/env";
-import { sendPasswordResetEmail } from "../../config/mailer";
+import {
+  sendLoginOtpEmail,
+  sendPasswordResetEmail,
+} from "../../config/mailer";
 
 function normalizeEmail(email: string): string {
   return String(email).trim().toLowerCase();
@@ -116,10 +119,105 @@ export async function loginController(req: Request, res: Response) {
       });
     }
 
+    const code = generateCode();
+    const codeHash = await bcrypt.hash(code, 10);
+    const expiresAt = getExpiresAt();
+
+    await prisma.loginOtp.deleteMany({
+      where: { email: normalizedEmail },
+    });
+
+    await prisma.loginOtp.create({
+      data: {
+        email: normalizedEmail,
+        codeHash,
+        expiresAt,
+        attempts: 0,
+      },
+    });
+
+    await sendLoginOtpEmail(normalizedEmail, code);
+
+    return res.status(200).json({
+      message: "Код входа отправлен на email",
+      requiresOtp: true,
+      email: normalizedEmail,
+    });
+  } catch (error) {
+    console.error("LOGIN ERROR:", error);
+    return res.status(500).json({
+      message: "Ошибка входа",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+}
+
+export async function verifyLoginOtpController(req: Request, res: Response) {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({
+        message: "Email и код обязательны",
+      });
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "Пользователь не найден",
+      });
+    }
+
+    const loginOtp = await prisma.loginOtp.findFirst({
+      where: { email: normalizedEmail },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!loginOtp) {
+      return res.status(400).json({
+        message: "Код входа не найден",
+      });
+    }
+
+    if (loginOtp.expiresAt.getTime() < Date.now()) {
+      await prisma.loginOtp.delete({
+        where: { id: loginOtp.id },
+      });
+
+      return res.status(400).json({
+        message: "Срок действия кода истёк",
+      });
+    }
+
+    const isCodeValid = await bcrypt.compare(String(code), loginOtp.codeHash);
+
+    if (!isCodeValid) {
+      await prisma.loginOtp.update({
+        where: { id: loginOtp.id },
+        data: {
+          attempts: loginOtp.attempts + 1,
+        },
+      });
+
+      return res.status(400).json({
+        message: "Неверный код",
+      });
+    }
+
     const accessToken = signAccessToken({
       id: user.id,
       email: user.email,
       role: user.role,
+    });
+
+    await prisma.loginOtp.delete({
+      where: { id: loginOtp.id },
     });
 
     return res.status(200).json({
@@ -133,9 +231,10 @@ export async function loginController(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error("LOGIN ERROR:", error);
+    console.error("VERIFY LOGIN OTP ERROR:", error);
     return res.status(500).json({
-      message: "Ошибка входа",
+      message: "Ошибка подтверждения входа",
+      error: error instanceof Error ? error.message : "Unknown error",
     });
   }
 }
