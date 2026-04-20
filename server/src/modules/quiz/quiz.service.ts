@@ -300,13 +300,19 @@ export async function getAttemptById(attemptId: string, userId: string) {
       answers: {
         include: {
           question: {
-            select: {
-              questionText: true,
-              explanation: true,
+            include: {
+              options: {
+                select: {
+                  id: true,
+                  optionText: true,
+                  isCorrect: true,
+                },
+              },
             },
           },
           selectedOption: {
             select: {
+              id: true,
               optionText: true,
             },
           },

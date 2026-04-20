@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import { api } from "../api";
 
 type UserProfile = {
@@ -18,6 +18,36 @@ type Attempt = {
     title: string;
     slug: string;
   };
+};
+
+type AttemptAnswer = {
+  id: string;
+  isCorrect: boolean;
+  question: {
+    questionText: string;
+    explanation?: string | null;
+    options: {
+      id: string;
+      optionText: string;
+      isCorrect: boolean;
+    }[];
+  };
+  selectedOption?: {
+    id: string;
+    optionText: string;
+  } | null;
+};
+
+type AttemptDetails = {
+  id: string;
+  score: number;
+  totalQuestions: number;
+  createdAt: string;
+  subject?: {
+    title: string;
+    slug: string;
+  };
+  answers: AttemptAnswer[];
 };
 
 function getInitial(name?: string) {
@@ -44,13 +74,14 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [name, setName] = useState("");
   const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [selectedAttempt, setSelectedAttempt] = useState<AttemptDetails | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -116,7 +147,6 @@ export default function ProfilePage() {
   async function handleSave(e: FormEvent) {
     e.preventDefault();
 
-    if (!profile) return;
     if (!name.trim()) {
       setError("Введите имя");
       return;
@@ -133,10 +163,12 @@ export default function ProfilePage() {
 
       setProfile(data);
       setName(data?.name || "");
+
+      const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
       localStorage.setItem(
         "user",
         JSON.stringify({
-          ...(JSON.parse(localStorage.getItem("user") || "{}")),
+          ...currentUser,
           ...data,
         })
       );
@@ -149,49 +181,17 @@ export default function ProfilePage() {
     }
   }
 
-  async function handlePhotoChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  async function openAttemptDetails(attemptId: string) {
     try {
-      setUploading(true);
+      setDetailsLoading(true);
       setError("");
-      setMessage("");
 
-      const formData = new FormData();
-      formData.append("avatar", file);
-
-      const { data } = await api.post("/profile/avatar", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      setProfile((prev) =>
-        prev
-          ? {
-              ...prev,
-              avatarUrl: data?.avatarUrl || prev.avatarUrl,
-            }
-          : prev
-      );
-
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          ...(JSON.parse(localStorage.getItem("user") || "{}")),
-          avatarUrl: data?.avatarUrl || "",
-        })
-      );
-
-      setMessage("Фото обновлено");
+      const { data } = await api.get(`/quiz/attempt/${attemptId}`);
+      setSelectedAttempt(data);
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Не удалось обновить фото");
+      setError(err?.response?.data?.message || "Не удалось загрузить детали попытки");
     } finally {
-      setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      setDetailsLoading(false);
     }
   }
 
@@ -206,14 +206,6 @@ export default function ProfilePage() {
     return <div className="profile-page"><p>Загрузка...</p></div>;
   }
 
-  if (error && !profile) {
-    return (
-      <div className="profile-page">
-        <p style={{ color: "crimson" }}>{error}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="profile-page">
       {message && <div className="profile-alert success">{message}</div>}
@@ -221,47 +213,16 @@ export default function ProfilePage() {
 
       <section className="profile-hero-card">
         <div className="profile-left">
-          <div className="profile-avatar-wrap">
-            {profile?.avatarUrl ? (
-              <img
-                src={profile.avatarUrl}
-                alt="Аватар"
-                className="profile-avatar-image"
-              />
-            ) : (
-              <div className="profile-avatar-fallback">
-                {getInitial(profile?.name)}
-              </div>
-            )}
+          <div className="profile-avatar-fallback">
+            {getInitial(profile?.name)}
           </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handlePhotoChange}
-            style={{ display: "none" }}
-          />
-
-          <button
-            type="button"
-            className="profile-outline-button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-          >
-            {uploading ? "Загрузка..." : "Изменить фото"}
-          </button>
         </div>
 
         <div className="profile-right">
-          <div className="profile-heading-row">
-            <div>
-              <h1 className="profile-title">Профиль</h1>
-              <p className="profile-subtitle">
-                Управление личными данными и просмотр результатов тестирования
-              </p>
-            </div>
-          </div>
+          <h1 className="profile-title">Профиль</h1>
+          <p className="profile-subtitle">
+            Здесь можно увидеть результаты, ошибки и прогресс по тестам
+          </p>
 
           <form onSubmit={handleSave} className="profile-form">
             <div className="profile-field">
@@ -328,7 +289,7 @@ export default function ProfilePage() {
         <div className="profile-history-head">
           <div>
             <h2>История попыток</h2>
-            <p>Все пройденные тесты и экзамены</p>
+            <p>Нажми на попытку, чтобы увидеть ошибки и правильные ответы</p>
           </div>
         </div>
 
@@ -359,6 +320,13 @@ export default function ProfilePage() {
                     <div className="profile-history-badge">
                       {percent}%
                     </div>
+                    <button
+                      type="button"
+                      className="profile-details-button"
+                      onClick={() => openAttemptDetails(attempt.id)}
+                    >
+                      Подробнее
+                    </button>
                   </div>
                 </div>
               );
@@ -366,6 +334,94 @@ export default function ProfilePage() {
           </div>
         )}
       </section>
+
+      {detailsLoading && (
+        <section className="profile-history-card" style={{ marginTop: 24 }}>
+          <div className="profile-empty-state">Загрузка деталей попытки...</div>
+        </section>
+      )}
+
+      {selectedAttempt && (
+        <section className="profile-history-card" style={{ marginTop: 24 }}>
+          <div className="profile-history-head">
+            <div>
+              <h2>Разбор попытки</h2>
+              <p>
+                {selectedAttempt.subject?.title || "Без названия"} ·{" "}
+                {formatDate(selectedAttempt.createdAt)}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="profile-close-button"
+              onClick={() => setSelectedAttempt(null)}
+            >
+              Закрыть
+            </button>
+          </div>
+
+          <div className="attempt-summary">
+            Результат: {selectedAttempt.score} / {selectedAttempt.totalQuestions} (
+            {calcPercent(selectedAttempt.score, selectedAttempt.totalQuestions)}%)
+          </div>
+
+          <div className="attempt-answers-list">
+            {selectedAttempt.answers.map((answer, index) => {
+              const correctOption = answer.question.options.find((o) => o.isCorrect);
+
+              return (
+                <div
+                  key={answer.id}
+                  className={`attempt-answer-card ${
+                    answer.isCorrect ? "correct" : "wrong"
+                  }`}
+                >
+                  <div className="attempt-answer-top">
+                    <div className="attempt-answer-number">Вопрос {index + 1}</div>
+                    <div
+                      className={`attempt-answer-status ${
+                        answer.isCorrect ? "correct" : "wrong"
+                      }`}
+                    >
+                      {answer.isCorrect ? "Верно" : "Ошибка"}
+                    </div>
+                  </div>
+
+                  <div className="attempt-question-text">
+                    {answer.question.questionText}
+                  </div>
+
+                  <div className="attempt-answer-block">
+                    <span className="attempt-answer-label">Твой ответ:</span>
+                    <div className="attempt-answer-value">
+                      {answer.selectedOption?.optionText || "Ответ не выбран"}
+                    </div>
+                  </div>
+
+                  {!answer.isCorrect && (
+                    <div className="attempt-answer-block">
+                      <span className="attempt-answer-label">Правильный ответ:</span>
+                      <div className="attempt-answer-value correct-text">
+                        {correctOption?.optionText || "Не найден"}
+                      </div>
+                    </div>
+                  )}
+
+                  {answer.question.explanation && (
+                    <div className="attempt-answer-block">
+                      <span className="attempt-answer-label">Пояснение:</span>
+                      <div className="attempt-answer-value">
+                        {answer.question.explanation}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
