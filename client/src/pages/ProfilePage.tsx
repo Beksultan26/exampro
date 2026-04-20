@@ -1,14 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { api } from "../api";
-import { Link } from "react-router-dom";
 
-type User = {
+type UserProfile = {
   id: string;
   name: string;
   email: string;
   role: string;
   avatarUrl?: string | null;
-  createdAt: string;
 };
 
 type Attempt = {
@@ -16,91 +14,149 @@ type Attempt = {
   score: number;
   totalQuestions: number;
   createdAt: string;
-  subject: {
+  subject?: {
     title: string;
     slug: string;
   };
 };
 
+function getInitial(name?: string) {
+  return (name || "U").trim().charAt(0).toUpperCase();
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  return date.toLocaleString("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function calcPercent(score: number, total: number) {
+  if (!total) return 0;
+  return Math.round((score / total) * 100);
+}
+
 export default function ProfilePage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [history, setHistory] = useState<Attempt[]>([]);
-  const [error, setError] = useState("");
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [name, setName] = useState("");
+  const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    async function loadProfile() {
+    async function loadData() {
       try {
-        const userRes = await api.get("/auth/me");
-        setUser(userRes.data);
-        setName(userRes.data.name);
+        setLoading(true);
+        setError("");
 
-        const historyRes = await api.get("/quiz/history");
-        setHistory(historyRes.data);
+        const [profileRes, historyRes] = await Promise.all([
+          api.get("/profile"),
+          api.get("/quiz/history"),
+        ]);
+
+        const profileData = profileRes.data;
+        const attemptsData = Array.isArray(historyRes.data) ? historyRes.data : [];
+
+        setProfile(profileData);
+        setName(profileData?.name || "");
+        setAttempts(attemptsData);
       } catch (err: any) {
-        setError(err?.response?.data?.message || "Ошибка загрузки профиля");
+        setError(err?.response?.data?.message || "Не удалось загрузить профиль");
+      } finally {
+        setLoading(false);
       }
     }
 
-    loadProfile();
+    loadData();
   }, []);
 
   const stats = useMemo(() => {
-    if (history.length === 0) {
+    const totalAttempts = attempts.length;
+
+    if (!totalAttempts) {
       return {
         attempts: 0,
-        avg: 0,
+        average: 0,
         best: 0,
         correct: 0,
         total: 0,
       };
     }
 
-    let totalPercent = 0;
-    let best = 0;
-    let correct = 0;
-    let total = 0;
+    const percents = attempts.map((item) =>
+      calcPercent(item.score, item.totalQuestions)
+    );
 
-    history.forEach((a) => {
-      const percent = a.totalQuestions ? (a.score / a.totalQuestions) * 100 : 0;
-      totalPercent += percent;
-      if (percent > best) best = percent;
-      correct += a.score;
-      total += a.totalQuestions;
-    });
+    const average = Math.round(
+      percents.reduce((sum, item) => sum + item, 0) / totalAttempts
+    );
+
+    const best = Math.max(...percents);
+    const correct = attempts.reduce((sum, item) => sum + item.score, 0);
+    const total = attempts.reduce((sum, item) => sum + item.totalQuestions, 0);
 
     return {
-      attempts: history.length,
-      avg: Math.round(totalPercent / history.length),
-      best: Math.round(best),
+      attempts: totalAttempts,
+      average,
+      best,
       correct,
       total,
     };
-  }, [history]);
+  }, [attempts]);
 
-  async function handleSaveProfile() {
+  async function handleSave(e: FormEvent) {
+    e.preventDefault();
+
+    if (!profile) return;
+    if (!name.trim()) {
+      setError("Введите имя");
+      return;
+    }
+
     try {
       setSaving(true);
-      const { data } = await api.put("/profile/update", { name });
-      setUser(data);
-      localStorage.setItem("user", JSON.stringify(data));
+      setError("");
+      setMessage("");
+
+      const { data } = await api.put("/profile", {
+        name: name.trim(),
+      });
+
+      setProfile(data);
+      setName(data?.name || "");
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          ...(JSON.parse(localStorage.getItem("user") || "{}")),
+          ...data,
+        })
+      );
+
+      setMessage("Профиль сохранён");
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Ошибка обновления профиля");
+      setError(err?.response?.data?.message || "Не удалось сохранить профиль");
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePhotoChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
 
     try {
       setUploading(true);
+      setError("");
+      setMessage("");
 
       const formData = new FormData();
       formData.append("avatar", file);
@@ -111,12 +167,31 @@ export default function ProfilePage() {
         },
       });
 
-      setUser(data);
-      localStorage.setItem("user", JSON.stringify(data));
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              avatarUrl: data?.avatarUrl || prev.avatarUrl,
+            }
+          : prev
+      );
+
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          ...(JSON.parse(localStorage.getItem("user") || "{}")),
+          avatarUrl: data?.avatarUrl || "",
+        })
+      );
+
+      setMessage("Фото обновлено");
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Ошибка загрузки фото");
+      setError(err?.response?.data?.message || "Не удалось обновить фото");
     } finally {
       setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   }
 
@@ -127,128 +202,170 @@ export default function ProfilePage() {
     window.location.href = "/login";
   }
 
-  if (error) {
-    return <p style={{ color: "crimson" }}>{error}</p>;
+  if (loading) {
+    return <div className="profile-page"><p>Загрузка...</p></div>;
   }
 
-  if (!user) {
-    return <p>Загрузка...</p>;
+  if (error && !profile) {
+    return (
+      <div className="profile-page">
+        <p style={{ color: "crimson" }}>{error}</p>
+      </div>
+    );
   }
 
   return (
     <div className="profile-page">
-      <div className="profile-card profile-top">
-        <div className="profile-header">
+      {message && <div className="profile-alert success">{message}</div>}
+      {error && <div className="profile-alert error">{error}</div>}
+
+      <section className="profile-hero-card">
+        <div className="profile-left">
           <div className="profile-avatar-wrap">
-            {user.avatarUrl ? (
+            {profile?.avatarUrl ? (
               <img
-                src={user.avatarUrl}
-                alt="avatar"
-                className="profile-avatar"
+                src={profile.avatarUrl}
+                alt="Аватар"
+                className="profile-avatar-image"
               />
             ) : (
-              <div className="profile-avatar profile-avatar-placeholder">
-                {user.name?.charAt(0).toUpperCase()}
+              <div className="profile-avatar-fallback">
+                {getInitial(profile?.name)}
               </div>
             )}
-
-            <button
-              className="btn-outline"
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {uploading ? "Загрузка..." : "Изменить фото"}
-            </button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              style={{ display: "none" }}
-              onChange={handleAvatarChange}
-            />
           </div>
 
-          <div className="profile-info-block">
-            <h1>Профиль</h1>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoChange}
+            style={{ display: "none" }}
+          />
 
-            <label className="profile-label">Имя</label>
-            <input
-              className="profile-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
+          <button
+            type="button"
+            className="profile-outline-button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? "Загрузка..." : "Изменить фото"}
+          </button>
+        </div>
 
-            <label className="profile-label">Email</label>
-            <div className="profile-static">{user.email}</div>
+        <div className="profile-right">
+          <div className="profile-heading-row">
+            <div>
+              <h1 className="profile-title">Профиль</h1>
+              <p className="profile-subtitle">
+                Управление личными данными и просмотр результатов тестирования
+              </p>
+            </div>
+          </div>
 
-            <label className="profile-label">Роль</label>
-            <div className="profile-static">{user.role}</div>
+          <form onSubmit={handleSave} className="profile-form">
+            <div className="profile-field">
+              <label>Имя</label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Введите имя"
+              />
+            </div>
 
-            <div className="profile-buttons">
-              <button className="btn-primary" onClick={handleSaveProfile}>
+            <div className="profile-field">
+              <label>Email</label>
+              <input value={profile?.email || ""} disabled />
+            </div>
+
+            <div className="profile-field">
+              <label>Роль</label>
+              <input value={profile?.role || ""} disabled />
+            </div>
+
+            <div className="profile-actions">
+              <button type="submit" className="profile-primary-button" disabled={saving}>
                 {saving ? "Сохранение..." : "Сохранить"}
               </button>
 
-              <button className="btn-danger" onClick={handleLogout}>
+              <button
+                type="button"
+                className="profile-danger-button"
+                onClick={handleLogout}
+              >
                 Выйти
               </button>
             </div>
+          </form>
+        </div>
+      </section>
+
+      <section className="profile-stats-grid">
+        <div className="profile-stat-card">
+          <div className="profile-stat-label">Попыток</div>
+          <div className="profile-stat-value">{stats.attempts}</div>
+        </div>
+
+        <div className="profile-stat-card">
+          <div className="profile-stat-label">Средний результат</div>
+          <div className="profile-stat-value">{stats.average}%</div>
+        </div>
+
+        <div className="profile-stat-card">
+          <div className="profile-stat-label">Лучший результат</div>
+          <div className="profile-stat-value">{stats.best}%</div>
+        </div>
+
+        <div className="profile-stat-card">
+          <div className="profile-stat-label">Правильных ответов</div>
+          <div className="profile-stat-value">
+            {stats.correct} / {stats.total}
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <span>Попыток</span>
-          <strong>{stats.attempts}</strong>
+      <section className="profile-history-card">
+        <div className="profile-history-head">
+          <div>
+            <h2>История попыток</h2>
+            <p>Все пройденные тесты и экзамены</p>
+          </div>
         </div>
 
-        <div className="stat-card">
-          <span>Средний результат</span>
-          <strong>{stats.avg}%</strong>
-        </div>
-
-        <div className="stat-card">
-          <span>Лучший результат</span>
-          <strong>{stats.best}%</strong>
-        </div>
-
-        <div className="stat-card">
-          <span>Правильных ответов</span>
-          <strong>{stats.correct} / {stats.total}</strong>
-        </div>
-      </div>
-
-      <div className="history-card">
-        <h2>История попыток</h2>
-
-        {history.length === 0 ? (
-          <p>Пока нет пройденных тестов.</p>
+        {attempts.length === 0 ? (
+          <div className="profile-empty-state">
+            Пока нет пройденных тестов.
+          </div>
         ) : (
-          <div className="history-list">
-            {history.map((attempt) => {
-              const percent = Math.round(
-                (attempt.score / attempt.totalQuestions) * 100
-              );
+          <div className="profile-history-list">
+            {attempts.map((attempt) => {
+              const percent = calcPercent(attempt.score, attempt.totalQuestions);
 
               return (
-                <Link
-                  key={attempt.id}
-                  to={`/result/${attempt.id}`}
-                  className="history-item"
-                >
-                  <strong>{attempt.subject.title}</strong>
-                  <div>Результат: {attempt.score} / {attempt.totalQuestions}</div>
-                  <div className="history-meta">
-                    {percent}% • {new Date(attempt.createdAt).toLocaleString()}
+                <div key={attempt.id} className="profile-history-item">
+                  <div className="profile-history-main">
+                    <div className="profile-history-subject">
+                      {attempt.subject?.title || "Без названия"}
+                    </div>
+                    <div className="profile-history-date">
+                      {formatDate(attempt.createdAt)}
+                    </div>
                   </div>
-                </Link>
+
+                  <div className="profile-history-meta">
+                    <div className="profile-history-score">
+                      {attempt.score} / {attempt.totalQuestions}
+                    </div>
+                    <div className="profile-history-badge">
+                      {percent}%
+                    </div>
+                  </div>
+                </div>
               );
             })}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }
