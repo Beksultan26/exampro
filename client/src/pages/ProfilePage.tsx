@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { api } from "../api";
 
 type UserProfile = {
