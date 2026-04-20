@@ -40,21 +40,31 @@ export default function HomePage() {
     loadSubjects();
   }, []);
 
+  const visibleSubjects = useMemo(() => {
+    return subjects.filter((s) => s.slug !== "general-exam");
+  }, [subjects]);
+
   const grouped = useMemo(() => {
     return {
-      basic: subjects.filter((s) => s.group === "basic"),
-      professional: subjects.filter((s) => s.group === "professional"),
-      applied: subjects.filter((s) => s.group === "applied"),
+      basic: visibleSubjects.filter((s) => s.group === "basic"),
+      professional: visibleSubjects.filter((s) => s.group === "professional"),
+      applied: visibleSubjects.filter((s) => s.group === "applied"),
     };
-  }, [subjects]);
+  }, [visibleSubjects]);
 
   const totalQuestions = useMemo(() => {
-    return subjects.reduce((sum, item) => sum + (item._count?.questions ?? 0), 0);
-  }, [subjects]);
+    return visibleSubjects.reduce(
+      (sum, item) => sum + (item._count?.questions ?? 0),
+      0
+    );
+  }, [visibleSubjects]);
 
   const totalTopics = useMemo(() => {
-    return subjects.reduce((sum, item) => sum + (item._count?.topics ?? 0), 0);
-  }, [subjects]);
+    return visibleSubjects.reduce(
+      (sum, item) => sum + (item._count?.topics ?? 0),
+      0
+    );
+  }, [visibleSubjects]);
 
   function renderCards(items: Subject[]) {
     if (items.length === 0) {
@@ -118,7 +128,7 @@ export default function HomePage() {
 
         <div className="stats-row">
           <div className="stat">
-            <div className="stat-num">{subjects.length}</div>
+            <div className="stat-num">{visibleSubjects.length}</div>
             <div className="stat-label">Дисциплин</div>
           </div>
 
@@ -152,11 +162,11 @@ export default function HomePage() {
 
       <footer className="site-footer">
         <div className="footer-content">
-          <h3>ExamPrep PRO</h3>
+          <h3>ExamPrep</h3>
           <p>Платформа для подготовки к экзаменам по IT-дисциплинам</p>
         </div>
 
-        <div className="footer-bottom">© 2026 ExamPrep PRO</div>
+        <div className="footer-bottom">© 2026 ExamPrep</div>
       </footer>
     </div>
   );

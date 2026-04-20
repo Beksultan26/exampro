@@ -44,8 +44,12 @@ export default function TestsPage() {
     loadSubjects();
   }, []);
 
+  const regularSubjects = useMemo(() => {
+    return subjects.filter((s) => s.slug !== "general-exam");
+  }, [subjects]);
+
   const filteredSubjects = useMemo(() => {
-    return subjects.filter((s) => {
+    return regularSubjects.filter((s) => {
       const matchesSearch =
         s.title.toLowerCase().includes(search.toLowerCase()) ||
         s.description.toLowerCase().includes(search.toLowerCase());
@@ -55,7 +59,7 @@ export default function TestsPage() {
 
       return matchesSearch && matchesGroup;
     });
-  }, [subjects, search, groupFilter]);
+  }, [regularSubjects, search, groupFilter]);
 
   const grouped = useMemo(() => {
     return {

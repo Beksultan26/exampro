@@ -20,11 +20,7 @@ export async function getQuizBySubjectController(
     return res.status(401).json({ message: "Не авторизован" });
   }
 
-  const subject = await getQuizBySubjectSlug(
-    slug,
-    req.user?.userId,
-    mode
-  );
+  const subject = await getQuizBySubjectSlug(slug, req.user?.userId, mode);
 
   if (!subject) {
     return res.status(404).json({ message: "Предмет не найден" });

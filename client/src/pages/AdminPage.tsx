@@ -35,13 +35,22 @@ type Question = {
   options: Option[];
 };
 
+function normalizeGroup(group: string) {
+  if (group === "Базовые" || group === "basic") return "basic";
+  if (group === "Профессиональные" || group === "professional") {
+    return "professional";
+  }
+  if (group === "Прикладные" || group === "applied") return "applied";
+  return "basic";
+}
+
 const emptySubjectForm = {
   title: "",
   slug: "",
   description: "",
   icon: "",
   color: "#2f65e5",
-  group: "Базовые",
+  group: "basic",
 };
 
 const emptyTopicForm = {
@@ -163,6 +172,7 @@ export default function AdminPage() {
     try {
       const payload = {
         ...subjectForm,
+        group: normalizeGroup(subjectForm.group),
         slug: ensureSlug(subjectForm.slug || subjectForm.title),
       };
 
@@ -334,7 +344,7 @@ export default function AdminPage() {
       description: subject.description || "",
       icon: subject.icon || "",
       color: subject.color || "#2f65e5",
-      group: subject.group,
+      group: normalizeGroup(subject.group),
     });
   }
 
@@ -443,9 +453,9 @@ export default function AdminPage() {
                 setSubjectForm((prev) => ({ ...prev, group: e.target.value }))
               }
             >
-              <option value="Базовые">Базовые</option>
-              <option value="Профессиональные">Профессиональные</option>
-              <option value="Прикладные">Прикладные</option>
+              <option value="basic">Базовые</option>
+              <option value="professional">Профессиональные</option>
+              <option value="applied">Прикладные</option>
             </select>
 
             <div className="admin-actions">

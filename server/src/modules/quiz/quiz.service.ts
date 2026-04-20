@@ -82,6 +82,13 @@ export async function getQuizBySubjectSlug(
 
 export async function getExamQuiz() {
   const questions = await prisma.question.findMany({
+    where: {
+      subject: {
+        slug: {
+          not: "general-exam",
+        },
+      },
+    },
     include: {
       options: {
         select: {
@@ -112,6 +119,13 @@ export async function submitExamQuiz(
   answers: SubmitAnswer[]
 ) {
   const questions = await prisma.question.findMany({
+    where: {
+      subject: {
+        slug: {
+          not: "general-exam",
+        },
+      },
+    },
     include: {
       options: true,
     },
