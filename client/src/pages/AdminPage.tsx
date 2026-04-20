@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
 
 type Subject = {
@@ -88,6 +88,9 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
+  const [isSubjectSelectOpen, setIsSubjectSelectOpen] = useState(false);
+  const selectRef = useRef<HTMLDivElement | null>(null);
+
   const selectedSubject = useMemo(
     () => subjects.find((s) => s.slug === selectedSubjectSlug) || null,
     [subjects, selectedSubjectSlug]
@@ -108,6 +111,20 @@ export default function AdminPage() {
       setQuestions([]);
     }
   }, [selectedSubject]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (!selectRef.current) return;
+      if (!selectRef.current.contains(e.target as Node)) {
+        setIsSubjectSelectOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   async function loadSubjects() {
     try {
@@ -136,7 +153,9 @@ export default function AdminPage() {
       const { data } = await api.get(`/admin/subjects/${slug}/questions`);
       setQuestions(data);
     } catch (err: any) {
-      setMessage(err?.response?.data?.message || "Не удалось загрузить вопросы");
+      setMessage(
+        err?.response?.data?.message || "Не удалось загрузить вопросы"
+      );
     }
   }
 
@@ -213,6 +232,7 @@ export default function AdminPage() {
 
   async function handleSaveTopic(e: React.FormEvent) {
     e.preventDefault();
+
     if (!selectedSubjectId) {
       setMessage("Сначала выбери предмет");
       return;
@@ -242,6 +262,7 @@ export default function AdminPage() {
       if (selectedSubjectSlug) {
         await loadTopics(selectedSubjectSlug);
       }
+
       resetTopicForm();
     } catch (err: any) {
       setMessage(err?.response?.data?.message || "Ошибка сохранения темы");
@@ -256,6 +277,7 @@ export default function AdminPage() {
     try {
       await api.delete(`/admin/topics/${id}`);
       setMessage("Тема удалена");
+
       if (selectedSubjectSlug) {
         await loadTopics(selectedSubjectSlug);
       }
@@ -266,12 +288,14 @@ export default function AdminPage() {
 
   async function handleSaveQuestion(e: React.FormEvent) {
     e.preventDefault();
+
     if (!selectedSubjectId) {
       setMessage("Сначала выбери предмет");
       return;
     }
 
     const correctCount = questionForm.options.filter((o) => o.isCorrect).length;
+
     if (correctCount !== 1) {
       setMessage("Нужно выбрать ровно один правильный ответ");
       return;
@@ -314,6 +338,7 @@ export default function AdminPage() {
       if (selectedSubjectSlug) {
         await loadQuestions(selectedSubjectSlug);
       }
+
       resetQuestionForm();
     } catch (err: any) {
       setMessage(err?.response?.data?.message || "Ошибка сохранения вопроса");
@@ -328,6 +353,7 @@ export default function AdminPage() {
     try {
       await api.delete(`/admin/questions/${id}`);
       setMessage("Вопрос удалён");
+
       if (selectedSubjectSlug) {
         await loadQuestions(selectedSubjectSlug);
       }
@@ -424,7 +450,10 @@ export default function AdminPage() {
               placeholder="Описание"
               value={subjectForm.description}
               onChange={(e) =>
-                setSubjectForm((prev) => ({ ...prev, description: e.target.value }))
+                setSubjectForm((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
               }
             />
 
@@ -475,17 +504,38 @@ export default function AdminPage() {
         <section className="admin-card">
           <h2>Предметы</h2>
 
-          <select
-            value={selectedSubjectSlug}
-            onChange={(e) => setSelectedSubjectSlug(e.target.value)}
-          >
-            <option value="">Выбери предмет</option>
-            {subjects.map((subject) => (
-              <option key={subject.id} value={subject.slug}>
-                {subject.title}
-              </option>
-            ))}
-          </select>
+          <div className="custom-select" ref={selectRef}>
+            <button
+              type="button"
+              className={`custom-select-trigger ${isSubjectSelectOpen ? "open" : ""}`}
+              onClick={() => setIsSubjectSelectOpen((prev) => !prev)}
+            >
+              <span>
+                {selectedSubject?.title || "Выбери предмет"}
+              </span>
+              <span className="custom-select-arrow">▾</span>
+            </button>
+
+            {isSubjectSelectOpen && (
+              <div className="custom-select-menu">
+                {subjects.map((subject) => (
+                  <button
+                    key={subject.id}
+                    type="button"
+                    className={`custom-select-option ${
+                      selectedSubjectSlug === subject.slug ? "active" : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedSubjectSlug(subject.slug);
+                      setIsSubjectSelectOpen(false);
+                    }}
+                  >
+                    {subject.title}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           <div className="admin-list">
             {subjects.map((subject) => (
@@ -500,9 +550,15 @@ export default function AdminPage() {
                 </div>
 
                 <div className="admin-item-actions">
-                  <button onClick={() => startEditSubject(subject)}>Редактировать</button>
-                  <button onClick={() => setSelectedSubjectSlug(subject.slug)}>Открыть</button>
-                  <button onClick={() => handleDeleteSubject(subject.id)}>Удалить</button>
+                  <button onClick={() => startEditSubject(subject)}>
+                    Редактировать
+                  </button>
+                  <button onClick={() => setSelectedSubjectSlug(subject.slug)}>
+                    Открыть
+                  </button>
+                  <button onClick={() => handleDeleteSubject(subject.id)}>
+                    Удалить
+                  </button>
                 </div>
               </div>
             ))}
@@ -561,8 +617,12 @@ export default function AdminPage() {
                   </div>
 
                   <div className="admin-item-actions">
-                    <button onClick={() => startEditTopic(topic)}>Редактировать</button>
-                    <button onClick={() => handleDeleteTopic(topic.id)}>Удалить</button>
+                    <button onClick={() => startEditTopic(topic)}>
+                      Редактировать
+                    </button>
+                    <button onClick={() => handleDeleteTopic(topic.id)}>
+                      Удалить
+                    </button>
                   </div>
                 </div>
               ))}
@@ -657,8 +717,12 @@ export default function AdminPage() {
                   </div>
 
                   <div className="admin-item-actions">
-                    <button onClick={() => startEditQuestion(question)}>Редактировать</button>
-                    <button onClick={() => handleDeleteQuestion(question.id)}>Удалить</button>
+                    <button onClick={() => startEditQuestion(question)}>
+                      Редактировать
+                    </button>
+                    <button onClick={() => handleDeleteQuestion(question.id)}>
+                      Удалить
+                    </button>
                   </div>
                 </div>
               ))}
