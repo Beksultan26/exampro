@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router-dom";
 import Layout from "./Layout";
 import ProtectedRoute from "./ProtectedRoute";
+import MistakesPage from "./pages/MistakesPage";
 
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
@@ -27,7 +28,10 @@ export const router = createBrowserRouter([
 
       { path: "theory", element: <TheoryPage /> },
       { path: "tests", element: <TestsPage /> },
-
+      {
+  path: "/mistakes",
+  element: <MistakesPage />
+},
       { path: "login", element: <LoginPage /> },
       { path: "register", element: <RegisterPage /> },
       { path: "forgot-password", element: <ForgotPasswordPage /> },

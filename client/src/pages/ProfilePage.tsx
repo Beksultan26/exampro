@@ -270,6 +270,9 @@ export default function ProfilePage() {
             {getInitial(profile?.name)}
           </div>
         </div>
+        <a href="/mistakes" className="profile-primary-button">
+  Мои ошибки
+</a>
 
         <div className="profile-right">
           <h1 className="profile-title">Профиль</h1>
