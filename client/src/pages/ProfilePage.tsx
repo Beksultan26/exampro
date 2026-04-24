@@ -138,6 +138,9 @@ export default function ProfilePage() {
               <a href="/mistakes" className="profile-outline-button">
                 Мои ошибки
               </a>
+              <a href="/mistakes-quiz" className="profile-outline-button">
+  Повторить ошибки
+</a>
 
               <button
                 type="button"
