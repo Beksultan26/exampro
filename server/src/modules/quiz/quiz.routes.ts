@@ -25,23 +25,23 @@ router.get("/mistakes", authMiddleware, async (req: any, res) => {
   try {
     const userId = req.user.userId;
 
-    const attempts = await prisma.attempt.findMany({
-      where: { userId },
+    const attempts = await prisma.quizAttempt.findMany({
+  where: { userId },
+  include: {
+    answers: {
+      where: { isCorrect: false },
       include: {
-        answers: {
-          where: { isCorrect: false },
+        question: {
           include: {
-            question: {
-              include: {
-                options: true,
-              },
-            },
-            selectedOption: true,
+            options: true,
           },
         },
+        selectedOption: true,
       },
-      orderBy: { createdAt: "desc" },
-    });
+    },
+  },
+  orderBy: { createdAt: "desc" },
+});
 
     const mistakes = attempts.flatMap((attempt) =>
       attempt.answers.map((answer) => ({
