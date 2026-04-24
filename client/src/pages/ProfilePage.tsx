@@ -1,4 +1,18 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { api } from "../api";
 
 type UserProfile = {
@@ -74,7 +88,8 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [name, setName] = useState("");
   const [attempts, setAttempts] = useState<Attempt[]>([]);
-  const [selectedAttempt, setSelectedAttempt] = useState<AttemptDetails | null>(null);
+  const [selectedAttempt, setSelectedAttempt] =
+    useState<AttemptDetails | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -95,7 +110,9 @@ export default function ProfilePage() {
         ]);
 
         const profileData = profileRes.data;
-        const attemptsData = Array.isArray(historyRes.data) ? historyRes.data : [];
+        const attemptsData = Array.isArray(historyRes.data)
+          ? historyRes.data
+          : [];
 
         setProfile(profileData);
         setName(profileData?.name || "");
@@ -144,6 +161,42 @@ export default function ProfilePage() {
     };
   }, [attempts]);
 
+  const progressData = useMemo(() => {
+    return [...attempts].reverse().map((item, index) => ({
+      name: `#${index + 1}`,
+      percent: calcPercent(item.score, item.totalQuestions),
+      subject: item.subject?.title || "Без названия",
+    }));
+  }, [attempts]);
+
+  const subjectStats = useMemo(() => {
+    const map: Record<string, { total: number; correct: number }> = {};
+
+    attempts.forEach((item) => {
+      const key = item.subject?.title || "Без названия";
+
+      if (!map[key]) {
+        map[key] = { total: 0, correct: 0 };
+      }
+
+      map[key].total += item.totalQuestions;
+      map[key].correct += item.score;
+    });
+
+    return Object.entries(map).map(([subject, data]) => ({
+      subject,
+      percent: calcPercent(data.correct, data.total),
+    }));
+  }, [attempts]);
+
+  const pieData = useMemo(
+    () => [
+      { name: "Правильные", value: stats.correct },
+      { name: "Ошибки", value: Math.max(stats.total - stats.correct, 0) },
+    ],
+    [stats.correct, stats.total]
+  );
+
   async function handleSave(e: FormEvent) {
     e.preventDefault();
 
@@ -165,13 +218,7 @@ export default function ProfilePage() {
       setName(data?.name || "");
 
       const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-      localStorage.setItem(
-        "user",
-        JSON.stringify({
-          ...currentUser,
-          ...data,
-        })
-      );
+      localStorage.setItem("user", JSON.stringify({ ...currentUser, ...data }));
 
       setMessage("Профиль сохранён");
     } catch (err: any) {
@@ -189,7 +236,9 @@ export default function ProfilePage() {
       const { data } = await api.get(`/quiz/attempt/${attemptId}`);
       setSelectedAttempt(data);
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Не удалось загрузить детали попытки");
+      setError(
+        err?.response?.data?.message || "Не удалось загрузить детали попытки"
+      );
     } finally {
       setDetailsLoading(false);
     }
@@ -203,7 +252,11 @@ export default function ProfilePage() {
   }
 
   if (loading) {
-    return <div className="profile-page"><p>Загрузка...</p></div>;
+    return (
+      <div className="profile-page">
+        <p>Загрузка...</p>
+      </div>
+    );
   }
 
   return (
@@ -245,7 +298,11 @@ export default function ProfilePage() {
             </div>
 
             <div className="profile-actions">
-              <button type="submit" className="profile-primary-button" disabled={saving}>
+              <button
+                type="submit"
+                className="profile-primary-button"
+                disabled={saving}
+              >
                 {saving ? "Сохранение..." : "Сохранить"}
               </button>
 
@@ -285,6 +342,62 @@ export default function ProfilePage() {
         </div>
       </section>
 
+      {attempts.length > 0 && (
+        <section className="profile-charts-grid">
+          <div className="profile-chart-card">
+            <h2>Прогресс по попыткам</h2>
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={progressData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis domain={[0, 100]} />
+                <Tooltip />
+                <Line
+                  type="monotone"
+                  dataKey="percent"
+                  name="Результат %"
+                  stroke="#7c6cf2"
+                  strokeWidth={3}
+                  dot={{ r: 5 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="profile-chart-card">
+            <h2>Результаты по предметам</h2>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={subjectStats}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="subject" />
+                <YAxis domain={[0, 100]} />
+                <Tooltip />
+                <Bar dataKey="percent" name="Средний результат %" fill="#38bdf8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="profile-chart-card">
+            <h2>Правильные и ошибки</h2>
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={90}
+                  label
+                >
+                  <Cell fill="#22c55e" />
+                  <Cell fill="#fb7185" />
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      )}
+
       <section className="profile-history-card">
         <div className="profile-history-head">
           <div>
@@ -294,9 +407,7 @@ export default function ProfilePage() {
         </div>
 
         {attempts.length === 0 ? (
-          <div className="profile-empty-state">
-            Пока нет пройденных тестов.
-          </div>
+          <div className="profile-empty-state">Пока нет пройденных тестов.</div>
         ) : (
           <div className="profile-history-list">
             {attempts.map((attempt) => {
@@ -317,9 +428,7 @@ export default function ProfilePage() {
                     <div className="profile-history-score">
                       {attempt.score} / {attempt.totalQuestions}
                     </div>
-                    <div className="profile-history-badge">
-                      {percent}%
-                    </div>
+                    <div className="profile-history-badge">{percent}%</div>
                     <button
                       type="button"
                       className="profile-details-button"
@@ -362,13 +471,17 @@ export default function ProfilePage() {
           </div>
 
           <div className="attempt-summary">
-            Результат: {selectedAttempt.score} / {selectedAttempt.totalQuestions} (
-            {calcPercent(selectedAttempt.score, selectedAttempt.totalQuestions)}%)
+            Результат: {selectedAttempt.score} /{" "}
+            {selectedAttempt.totalQuestions} (
+            {calcPercent(selectedAttempt.score, selectedAttempt.totalQuestions)}
+            %)
           </div>
 
           <div className="attempt-answers-list">
             {selectedAttempt.answers.map((answer, index) => {
-              const correctOption = answer.question.options.find((o) => o.isCorrect);
+              const correctOption = answer.question.options.find(
+                (o) => o.isCorrect
+              );
 
               return (
                 <div
@@ -378,7 +491,9 @@ export default function ProfilePage() {
                   }`}
                 >
                   <div className="attempt-answer-top">
-                    <div className="attempt-answer-number">Вопрос {index + 1}</div>
+                    <div className="attempt-answer-number">
+                      Вопрос {index + 1}
+                    </div>
                     <div
                       className={`attempt-answer-status ${
                         answer.isCorrect ? "correct" : "wrong"
@@ -401,7 +516,9 @@ export default function ProfilePage() {
 
                   {!answer.isCorrect && (
                     <div className="attempt-answer-block">
-                      <span className="attempt-answer-label">Правильный ответ:</span>
+                      <span className="attempt-answer-label">
+                        Правильный ответ:
+                      </span>
                       <div className="attempt-answer-value correct-text">
                         {correctOption?.optionText || "Не найден"}
                       </div>
