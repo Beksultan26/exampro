@@ -7,7 +7,7 @@ COPY . .
 WORKDIR /app/server
 
 RUN npm install
-RUN npx prisma generate
+RUN npx prisma generate --schema=./prisma/schema.prisma
 RUN npm run build
 
 EXPOSE 5000
