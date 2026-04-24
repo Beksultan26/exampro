@@ -6,8 +6,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
+ 
   PieChart,
   Pie,
   Cell,
