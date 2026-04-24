@@ -7,8 +7,8 @@ COPY . .
 WORKDIR /app/server
 
 RUN npm install
-RUN npm run build
 RUN npx prisma generate
+RUN npm run build
 
 EXPOSE 5000
 
