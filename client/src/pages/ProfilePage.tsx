@@ -1,4 +1,17 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 import { api } from "../api";
 
 type UserProfile = {
@@ -63,6 +76,16 @@ export default function ProfilePage() {
     };
   }, [attempts]);
 
+  const progressData = attempts.map((a, i) => ({
+    name: `#${i + 1}`,
+    percent: calcPercent(a.score, a.totalQuestions),
+  }));
+
+  const pieData = [
+    { name: "Правильные", value: stats.correct },
+    { name: "Ошибки", value: stats.totalQ - stats.correct },
+  ];
+
   async function save(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -81,7 +104,7 @@ export default function ProfilePage() {
   return (
     <div className="profile-page">
 
-      {/* TOP CARD */}
+      {/* ПРОФИЛЬ */}
       <section className="profile-hero-card">
         <div className="profile-left">
           <div className="profile-avatar-fallback">
@@ -108,7 +131,6 @@ export default function ProfilePage() {
               <input value={profile?.role || ""} disabled />
             </div>
 
-            {/* 🔥 КНОПКИ */}
             <div className="profile-actions">
               <button className="profile-primary-button" disabled={saving}>
                 {saving ? "..." : "Сохранить"}
@@ -130,7 +152,7 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* STATS */}
+      {/* СТАТИСТИКА */}
       <section className="profile-stats-grid">
         <div className="profile-stat-card">
           <div>Попыток</div>
@@ -152,6 +174,58 @@ export default function ProfilePage() {
           <h2>{stats.correct}/{stats.totalQ}</h2>
         </div>
       </section>
+
+      {/* ГРАФИКИ */}
+      {attempts.length > 0 && (
+        <section className="profile-charts-grid">
+
+          <div className="profile-chart-card">
+            <h2>Прогресс</h2>
+            <ResponsiveContainer width="100%" height={250}>
+              <LineChart data={progressData}>
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Line type="monotone" dataKey="percent" stroke="#7C6CF2" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="profile-chart-card">
+            <h2>Ошибки</h2>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie data={pieData} dataKey="value" outerRadius={80}>
+                  <Cell fill="#4ade80" />
+                  <Cell fill="#f87171" />
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+
+        </section>
+      )}
+
+      {/* ИСТОРИЯ */}
+      <section className="profile-history-card">
+        <h2>История</h2>
+
+        {attempts.length === 0 ? (
+          <p>Нет тестов</p>
+        ) : (
+          attempts.map((a) => (
+            <div key={a.id} className="profile-history-item">
+              <div>{a.subject?.title}</div>
+              <div>
+                {a.score}/{a.totalQuestions} (
+                {calcPercent(a.score, a.totalQuestions)}%)
+              </div>
+            </div>
+          ))
+        )}
+      </section>
+
     </div>
   );
 }
