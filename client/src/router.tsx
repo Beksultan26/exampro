@@ -41,7 +41,7 @@ export const router = createBrowserRouter([
       {
   path: "/mistakes-quiz",
   element: <MistakesQuizPage />,
-}
+},
 
       { path: "exam", element: <ExamPage /> },
 
