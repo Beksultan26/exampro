@@ -8,6 +8,7 @@ import { prisma } from "../../config/db";
 const router = Router();
 
 const uploadDir = path.join(process.cwd(), "uploads");
+
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -26,15 +27,45 @@ const upload = multer({ storage });
 
 router.use(authMiddleware);
 
-router.put("/update", async (req: any, res) => {
+router.get("/", async (req: any, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        avatarUrl: true,
+        createdAt: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "Пользователь не найден" });
+    }
+
+    return res.json(user);
+  } catch (error) {
+    return res.status(500).json({ message: "Не удалось загрузить профиль" });
+  }
+});
+
+router.put("/", async (req: any, res) => {
   try {
     const userId = req.user.userId;
     const { name } = req.body;
 
+    if (!name || !name.trim()) {
+      return res.status(400).json({ message: "Введите имя" });
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
-        name,
+        name: name.trim(),
       },
       select: {
         id: true,
@@ -46,9 +77,9 @@ router.put("/update", async (req: any, res) => {
       },
     });
 
-    res.json(updatedUser);
+    return res.json(updatedUser);
   } catch (error) {
-    res.status(500).json({ message: "Не удалось обновить профиль" });
+    return res.status(500).json({ message: "Не удалось обновить профиль" });
   }
 });
 
@@ -75,9 +106,9 @@ router.post("/avatar", upload.single("avatar"), async (req: any, res) => {
       },
     });
 
-    res.json(updatedUser);
+    return res.json(updatedUser);
   } catch (error) {
-    res.status(500).json({ message: "Не удалось загрузить фото" });
+    return res.status(500).json({ message: "Не удалось загрузить фото" });
   }
 });
 
