@@ -4130,73 +4130,15 @@ a {
   }
 }
 
+.profile-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
 
-/* =========================
-   MOBILE FIX (ВАЖНО)
-========================= */
-
-@media (max-width: 768px) {
-
-  /* заголовки */
-  .profile-title {
-    font-size: 28px !important;
-  }
-
-  .profile-history-head h2 {
-    font-size: 20px !important;
-  }
-
-  /* карточки */
-  .profile-hero-card,
-  .profile-history-card,
-  .profile-chart-card {
-    padding: 18px !important;
-    border-radius: 18px;
-  }
-
-  /* графики */
-  .profile-chart-card {
-    overflow: hidden;
-  }
-
-  .recharts-responsive-container {
-    width: 100% !important;
-    height: 220px !important;
-  }
-
-  /* статистика */
-  .profile-stat-value {
-    font-size: 26px !important;
-  }
-
-  /* кнопки */
-  .profile-primary-button,
-  .profile-danger-button,
-  .profile-outline-button {
-    width: 100%;
-    font-size: 14px;
-    padding: 12px;
-  }
-
-  /* поля */
-  .profile-field input {
-    height: 46px;
-    font-size: 14px;
-  }
-
-  /* история */
-  .profile-history-item {
-    padding: 14px;
-  }
-
-  .profile-history-subject {
-    font-size: 15px;
-  }
-
-  .profile-history-badge {
-    min-width: 60px;
-    font-size: 14px;
-    padding: 6px 10px;
-  }
-
+.profile-outline-button {
+  color: #ffffff;
+  background: linear-gradient(135deg, #7c4dff, #2ab7ff);
+  box-shadow: 0 14px 28px rgba(88, 114, 255, 0.22);
 }
