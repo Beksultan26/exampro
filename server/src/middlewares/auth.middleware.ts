@@ -34,7 +34,7 @@ export function authMiddleware(
       });
     }
 
-    const decoded = jwt.verify(token, env.accessSecret) as JwtPayload;
+    const decoded = jwt.verify(token, env.jwtAccessSecret) as JwtPayload;
 
     req.user = decoded;
 

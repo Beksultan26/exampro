@@ -1,15 +1,12 @@
 import { Router } from "express";
 import {
-  forgotPasswordController,
   loginController,
   meController,
-  registerController,
-  resetPasswordController,
-  verifyLoginOtpController,
-  
 } from "./auth.controller";
+
 import { authMiddleware } from "../../middlewares/auth.middleware";
 import { authRateLimiter } from "./auth.rate-limit";
+
 import {
   getGoogleAuthUrl,
   handleGoogleCallback,
@@ -17,12 +14,9 @@ import {
 
 const router = Router();
 
-router.post("/register", authRateLimiter, registerController);
 router.post("/login", authRateLimiter, loginController);
-router.post("/verify-login-otp", authRateLimiter, verifyLoginOtpController);
-router.post("/forgot-password", authRateLimiter, forgotPasswordController);
-router.post("/reset-password", authRateLimiter, resetPasswordController);
 router.get("/me", authMiddleware, meController);
+
 router.get("/google", (_req, res) => {
   const url = getGoogleAuthUrl();
   res.redirect(url);
