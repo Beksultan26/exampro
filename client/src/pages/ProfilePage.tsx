@@ -39,11 +39,19 @@ function getLocalUser(): UserProfile {
 }
 
 function extractUser(data: any): UserProfile {
-  return data?.user || data?.profile || data?.data || data || {};
+  return (
+    data?.user ||
+    data?.profile?.user ||
+    data?.profile ||
+    data?.data?.user ||
+    data?.data ||
+    data ||
+    {}
+  );
 }
 
 export default function ProfilePage() {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfile>({});
   const [name, setName] = useState("");
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,19 +67,23 @@ export default function ProfilePage() {
       setLoading(true);
 
       const localUser = getLocalUser();
-      let userData: UserProfile = {};
+      let serverUser: UserProfile = {};
 
       try {
-        const res = await api.get("/profile");
-        userData = extractUser(res.data);
+        const meRes = await api.get("/auth/me");
+        serverUser = extractUser(meRes.data);
       } catch {
-        const res = await api.get("/auth/me");
-        userData = extractUser(res.data);
+        try {
+          const profileRes = await api.get("/profile");
+          serverUser = extractUser(profileRes.data);
+        } catch {
+          serverUser = {};
+        }
       }
 
       const mergedUser: UserProfile = {
         ...localUser,
-        ...userData,
+        ...serverUser,
       };
 
       setProfile(mergedUser);
@@ -79,16 +91,16 @@ export default function ProfilePage() {
 
       try {
         const historyRes = await api.get("/quiz/history");
-        setAttempts(historyRes.data || []);
+        const history = Array.isArray(historyRes.data)
+          ? historyRes.data
+          : historyRes.data?.attempts || historyRes.data?.data || [];
+
+        setAttempts(history);
       } catch {
         setAttempts([]);
       }
     } catch (error) {
       console.error("Profile load error:", error);
-
-      const localUser = getLocalUser();
-      setProfile(localUser);
-      setName(localUser.name || "");
     } finally {
       setLoading(false);
     }
@@ -136,12 +148,13 @@ export default function ProfilePage() {
           ...extractUser(res.data),
         };
       } catch {
-        console.warn("Profile update endpoint failed, saved locally only");
+        console.warn("Profile update saved only locally");
       }
 
       setProfile(updated);
       localStorage.setItem("user", JSON.stringify(updated));
-    } catch (error) {
+      alert("Профиль сохранён");
+    } catch {
       alert("Ошибка сохранения профиля");
     } finally {
       setSaving(false);
@@ -150,7 +163,6 @@ export default function ProfilePage() {
 
   async function uploadAvatar(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-
     if (!file) return;
 
     const formData = new FormData();
@@ -199,9 +211,9 @@ export default function ProfilePage() {
     );
   }
 
-  const displayName = name || profile?.name || "";
-  const displayEmail = profile?.email || "";
-  const displayRole = profile?.role || "STUDENT";
+  const displayName = name || profile.name || "";
+  const displayEmail = profile.email || "";
+  const displayRole = profile.role || "STUDENT";
 
   return (
     <div className="profile-page">
@@ -216,7 +228,7 @@ export default function ProfilePage() {
           }}
         >
           <div className="profile-avatar-fallback">
-            {profile?.avatarUrl ? (
+            {profile.avatarUrl ? (
               <img
                 src={profile.avatarUrl}
                 alt="avatar"
@@ -265,6 +277,7 @@ export default function ProfilePage() {
               <input
                 value={displayName}
                 onChange={(e) => setName(e.target.value)}
+                placeholder="Ваше имя"
               />
             </div>
 
