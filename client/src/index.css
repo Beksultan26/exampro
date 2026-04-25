@@ -4142,3 +4142,19 @@ a {
   background: linear-gradient(135deg, #7c4dff, #2ab7ff);
   box-shadow: 0 14px 28px rgba(88, 114, 255, 0.22);
 }
+
+.google-btn {
+  width: 100%;
+  border: 1px solid #ddd;
+  background: #fff;
+  color: #222;
+  border-radius: 12px;
+  padding: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 12px;
+}
+
+.google-btn:hover {
+  background: #f5f5f5;
+}

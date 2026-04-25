@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import Layout from "./Layout";
 import ProtectedRoute from "./ProtectedRoute";
 import MistakesPage from "./pages/MistakesPage";
+import GoogleCallbackPage from "./pages/GoogleCallbackPage";
 
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
@@ -34,6 +35,12 @@ export const router = createBrowserRouter([
   element: <MistakesPage />
 },
       { path: "login", element: <LoginPage /> },
+      {
+  path: "/auth/google/callback",
+  element: <GoogleCallbackPage />,
+},
+      
+
       { path: "register", element: <RegisterPage /> },
       { path: "forgot-password", element: <ForgotPasswordPage /> },
       { path: "reset-password", element: <ResetPasswordPage /> },

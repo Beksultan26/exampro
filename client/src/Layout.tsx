@@ -63,7 +63,7 @@ export default function Layout() {
     <div className="app-shell">
       <nav className="main-nav">
         <Link to="/" className="nav-logo">
-          Exam<span>Pro</span>
+          Exam<span>Prep</span>
         </Link>
 
         <button className="burger" onClick={() => setMenuOpen(!menuOpen)}>

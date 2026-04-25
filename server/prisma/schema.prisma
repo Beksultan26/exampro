@@ -27,6 +27,7 @@ model User {
   passwordHash String
   role         Role          @default(STUDENT)
   avatarUrl    String?
+  googleId     String?       @unique
   createdAt    DateTime      @default(now())
 
   attempts     QuizAttempt[]

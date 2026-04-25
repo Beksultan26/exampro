@@ -91,12 +91,23 @@ export default function LoginPage() {
           {loading ? "Проверка..." : "Войти"}
         </button>
 
+
         {error && <div className="auth-error">{error}</div>}
 
         <p className="auth-text">
           Нет аккаунта? <Link to="/register">Создать аккаунт</Link>
         </p>
+        <button
+  type="button"
+  className="google-btn"
+  onClick={() => {
+    window.location.href = "/api/auth/google";
+  }}
+>
+  Войти через Google
+</button>
       </form>
     </div>
+
   );
 }
