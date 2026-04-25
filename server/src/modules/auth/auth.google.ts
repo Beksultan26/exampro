@@ -64,7 +64,7 @@ export async function handleGoogleCallback(code: string) {
         email,
         passwordHash: "",
         googleId: payload.sub,
-        avatar: payload.picture || null,
+        avatarUrl: payload.picture || null,
       },
     });
   } else {
@@ -72,7 +72,7 @@ export async function handleGoogleCallback(code: string) {
       where: { id: user.id },
       data: {
         googleId: user.googleId || payload.sub,
-        avatar: payload.picture || user.avatarUrl,
+        avatarUrl: payload.picture || user.avatarUrl,
       },
     });
   }
@@ -86,7 +86,7 @@ export async function handleGoogleCallback(code: string) {
       name: user.name,
       email: user.email,
       role: user.role,
-      avatar: user.avatarUrl,
+      avatarUrl: user.avatarUrl,
     },
   };
 }

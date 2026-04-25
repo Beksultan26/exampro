@@ -28,7 +28,7 @@ export function signAccessToken(user: {
       email: user.email,
       role: user.role,
     },
-    env.accessSecret,
+    env.jwtAccessSecret,
     {
       expiresIn: "7d",
     }
