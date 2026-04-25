@@ -1,11 +1,17 @@
-import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { api } from "../api";
 
 type UserProfile = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
+  id?: string;
+  name?: string;
+  email?: string;
+  role?: string;
   avatarUrl?: string | null;
 };
 
@@ -24,6 +30,18 @@ function calcPercent(score: number, total: number) {
   return Math.round((score / total) * 100);
 }
 
+function getLocalUser(): UserProfile {
+  try {
+    return JSON.parse(localStorage.getItem("user") || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function extractUser(data: any): UserProfile {
+  return data?.user || data?.profile || data?.data || data || {};
+}
+
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [name, setName] = useState("");
@@ -40,18 +58,24 @@ export default function ProfilePage() {
     try {
       setLoading(true);
 
-      let userData: UserProfile | null = null;
+      const localUser = getLocalUser();
+      let userData: UserProfile = {};
 
       try {
         const res = await api.get("/profile");
-        userData = res.data.user || res.data;
+        userData = extractUser(res.data);
       } catch {
         const res = await api.get("/auth/me");
-        userData = res.data.user || res.data;
+        userData = extractUser(res.data);
       }
 
-      setProfile(userData);
-      setName(userData?.name || "");
+      const mergedUser: UserProfile = {
+        ...localUser,
+        ...userData,
+      };
+
+      setProfile(mergedUser);
+      setName(mergedUser.name || "");
 
       try {
         const historyRes = await api.get("/quiz/history");
@@ -61,6 +85,10 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error("Profile load error:", error);
+
+      const localUser = getLocalUser();
+      setProfile(localUser);
+      setName(localUser.name || "");
     } finally {
       setLoading(false);
     }
@@ -68,7 +96,13 @@ export default function ProfilePage() {
 
   const stats = useMemo(() => {
     if (!attempts.length) {
-      return { attempts: 0, avg: 0, best: 0, correct: 0, totalQ: 0 };
+      return {
+        attempts: 0,
+        avg: 0,
+        best: 0,
+        correct: 0,
+        totalQ: 0,
+      };
     }
 
     const percents = attempts.map((a) =>
@@ -90,14 +124,23 @@ export default function ProfilePage() {
     try {
       setSaving(true);
 
-      const res = await api.put("/profile", { name });
-      const updated = res.data.user || res.data;
+      let updated: UserProfile = {
+        ...profile,
+        name,
+      };
+
+      try {
+        const res = await api.put("/profile", { name });
+        updated = {
+          ...updated,
+          ...extractUser(res.data),
+        };
+      } catch {
+        console.warn("Profile update endpoint failed, saved locally only");
+      }
 
       setProfile(updated);
-
-      const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-      savedUser.name = updated.name;
-      localStorage.setItem("user", JSON.stringify(savedUser));
+      localStorage.setItem("user", JSON.stringify(updated));
     } catch (error) {
       alert("Ошибка сохранения профиля");
     } finally {
@@ -124,14 +167,13 @@ export default function ProfilePage() {
 
       const avatarUrl = res.data.avatarUrl;
 
-      setProfile((prev) => {
-        if (!prev) return prev;
-        return { ...prev, avatarUrl };
-      });
+      const updated = {
+        ...profile,
+        avatarUrl,
+      };
 
-      const savedUser = JSON.parse(localStorage.getItem("user") || "{}");
-      savedUser.avatarUrl = avatarUrl;
-      localStorage.setItem("user", JSON.stringify(savedUser));
+      setProfile(updated);
+      localStorage.setItem("user", JSON.stringify(updated));
     } catch (error) {
       console.error("Avatar upload error:", error);
       alert("Ошибка загрузки фото");
@@ -157,15 +199,9 @@ export default function ProfilePage() {
     );
   }
 
-  if (!profile) {
-    return (
-      <div className="profile-page">
-        <section className="profile-hero-card">
-          <h1 className="profile-title">Профиль не найден</h1>
-        </section>
-      </div>
-    );
-  }
+  const displayName = name || profile?.name || "";
+  const displayEmail = profile?.email || "";
+  const displayRole = profile?.role || "STUDENT";
 
   return (
     <div className="profile-page">
@@ -180,7 +216,7 @@ export default function ProfilePage() {
           }}
         >
           <div className="profile-avatar-fallback">
-            {profile.avatarUrl ? (
+            {profile?.avatarUrl ? (
               <img
                 src={profile.avatarUrl}
                 alt="avatar"
@@ -192,7 +228,7 @@ export default function ProfilePage() {
                 }}
               />
             ) : (
-              profile.name?.[0]?.toUpperCase() || "U"
+              displayName?.[0]?.toUpperCase() || "U"
             )}
           </div>
 
@@ -226,17 +262,20 @@ export default function ProfilePage() {
           <form onSubmit={save} className="profile-form">
             <div className="profile-field">
               <label>Имя</label>
-              <input value={name} onChange={(e) => setName(e.target.value)} />
+              <input
+                value={displayName}
+                onChange={(e) => setName(e.target.value)}
+              />
             </div>
 
             <div className="profile-field">
               <label>Email</label>
-              <input value={profile.email || ""} disabled />
+              <input value={displayEmail} disabled />
             </div>
 
             <div className="profile-field">
               <label>Роль</label>
-              <input value={profile.role || ""} disabled />
+              <input value={displayRole} disabled />
             </div>
 
             <div className="profile-actions">
