@@ -1,115 +1,52 @@
 import { Router } from "express";
 import multer from "multer";
 import path from "path";
-import fs from "fs";
-import { authMiddleware } from "../../middlewares/auth.middleware";
 import { prisma } from "../../config/db";
+import { authMiddleware, AuthRequest } from "../../middlewares/auth.middleware";
 
 const router = Router();
 
-const uploadDir = path.join(process.cwd(), "uploads");
-
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (req: any, file, cb) => {
+  destination: "uploads/",
+  filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname);
-    cb(null, `${req.user.userId}-${Date.now()}${ext}`);
+    cb(null, Date.now() + ext);
   },
 });
 
 const upload = multer({ storage });
 
-router.use(authMiddleware);
+router.post(
+  "/avatar",
+  authMiddleware,
+  upload.single("avatar"),
+  async (req: AuthRequest, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Не авторизован" });
+      }
 
-router.get("/", async (req: any, res) => {
-  try {
-    const userId = req.user.userId;
+      const file = req.file;
 
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        avatarUrl: true,
-        createdAt: true,
-      },
-    });
+      if (!file) {
+        return res.status(400).json({ message: "Файл не загружен" });
+      }
 
-    if (!user) {
-      return res.status(404).json({ message: "Пользователь не найден" });
+      const avatarUrl = `/uploads/${file.filename}`;
+
+      const user = await prisma.user.update({
+        where: { id: req.user.userId },
+        data: { avatarUrl },
+      });
+
+      res.json({
+        avatarUrl: user.avatarUrl,
+      });
+    } catch (e) {
+      console.error(e);
+      res.status(500).json({ message: "Ошибка загрузки" });
     }
-
-    return res.json(user);
-  } catch (error) {
-    return res.status(500).json({ message: "Не удалось загрузить профиль" });
   }
-});
-
-router.put("/", async (req: any, res) => {
-  try {
-    const userId = req.user.userId;
-    const { name } = req.body;
-
-    if (!name || !name.trim()) {
-      return res.status(400).json({ message: "Введите имя" });
-    }
-
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        name: name.trim(),
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        avatarUrl: true,
-        createdAt: true,
-      },
-    });
-
-    return res.json(updatedUser);
-  } catch (error) {
-    return res.status(500).json({ message: "Не удалось обновить профиль" });
-  }
-});
-
-router.post("/avatar", upload.single("avatar"), async (req: any, res) => {
-  try {
-    const userId = req.user.userId;
-
-    if (!req.file) {
-      return res.status(400).json({ message: "Файл не выбран" });
-    }
-
-    const avatarUrl = `/uploads/${req.file.filename}`;
-
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: { avatarUrl },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        avatarUrl: true,
-        createdAt: true,
-      },
-    });
-
-    return res.json(updatedUser);
-  } catch (error) {
-    return res.status(500).json({ message: "Не удалось загрузить фото" });
-  }
-});
+);
 
 export default router;
