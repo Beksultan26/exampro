@@ -13,7 +13,7 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [user, setUser] = useState<Me | null>(() => {
+  const [, setUser] = useState<Me | null>(() => {
     try {
       const savedUser = localStorage.getItem("user");
       return savedUser ? JSON.parse(savedUser) : null;
