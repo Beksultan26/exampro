@@ -18,11 +18,16 @@ export default function ProtectedRoute({
     }
 
     try {
-      const user = JSON.parse(userRaw);
-      if (user.role !== "ADMIN") {
+      const parsed = JSON.parse(userRaw);
+
+      const role = parsed?.role || parsed?.user?.role;
+
+      if (role !== "ADMIN") {
         return <Navigate to="/" replace />;
       }
     } catch {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
       return <Navigate to="/login" replace />;
     }
   }
