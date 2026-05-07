@@ -14,16 +14,23 @@ export default function Layout() {
   const navigate = useNavigate();
 
   const [user, setUser] = useState<Me | null>(() => {
-    const savedUser = localStorage.getItem("user");
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem("user");
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      localStorage.removeItem("user");
+      return null;
+    }
   });
 
   const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
+  const isLoggedIn = !!localStorage.getItem("token");
 
+  useEffect(() => {
     const loadMe = async () => {
+      const token = localStorage.getItem("token");
+
       if (!token) {
         setUser(null);
         return;
@@ -41,11 +48,15 @@ export default function Layout() {
     };
 
     loadMe();
-  }, []);
+  }, [location.pathname]);
 
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
     return location.pathname.startsWith(path);
+  };
+
+  const closeMenu = () => {
+    setMenuOpen(false);
   };
 
   const handleLogout = () => {
@@ -53,60 +64,95 @@ export default function Layout() {
     localStorage.removeItem("user");
     sessionStorage.clear();
     setUser(null);
+    setMenuOpen(false);
     navigate("/login");
-    window.location.reload();
   };
-
-  const isLoggedIn = !!localStorage.getItem("token");
 
   return (
     <div className="app-shell">
       <nav className="main-nav">
-        <Link to="/" className="nav-logo">
+        <Link to="/" className="nav-logo" onClick={closeMenu}>
           Exam<span>Prep</span>
         </Link>
 
-        <button className="burger" onClick={() => setMenuOpen(!menuOpen)}>
+        <button
+          type="button"
+          className="burger"
+          onClick={() => setMenuOpen((prev) => !prev)}
+        >
           ☰
         </button>
 
         <div className={`nav-links ${menuOpen ? "open" : ""}`}>
-          <Link className={`nav-btn ${isActive("/") ? "active" : ""}`} to="/">
+          <Link
+            className={`nav-btn ${isActive("/") ? "active" : ""}`}
+            to="/"
+            onClick={closeMenu}
+          >
             Главная
           </Link>
 
-          <Link className={`nav-btn ${isActive("/theory") ? "active" : ""}`} to="/theory">
+          <Link
+            className={`nav-btn ${isActive("/theory") ? "active" : ""}`}
+            to="/theory"
+            onClick={closeMenu}
+          >
             Теория
           </Link>
 
-          <Link className={`nav-btn ${isActive("/tests") ? "active" : ""}`} to="/tests">
+          <Link
+            className={`nav-btn ${isActive("/tests") ? "active" : ""}`}
+            to="/tests"
+            onClick={closeMenu}
+          >
             Тесты
           </Link>
 
-          {user?.role === "ADMIN" && (
-            <Link className={`nav-btn ${isActive("/admin") ? "active" : ""}`} to="/admin">
+          {isLoggedIn && (
+            <Link
+              className={`nav-btn ${isActive("/admin") ? "active" : ""}`}
+              to="/admin"
+              onClick={closeMenu}
+            >
               Админка
             </Link>
           )}
 
           {!isLoggedIn ? (
             <>
-              <Link className={`nav-btn ${isActive("/login") ? "active" : ""}`} to="/login">
+              <Link
+                className={`nav-btn ${isActive("/login") ? "active" : ""}`}
+                to="/login"
+                onClick={closeMenu}
+              >
                 Вход
               </Link>
+
               <Link
-                className={`nav-btn nav-outline ${isActive("/register") ? "active" : ""}`}
+                className={`nav-btn nav-outline ${
+                  isActive("/register") ? "active" : ""
+                }`}
                 to="/register"
+                onClick={closeMenu}
               >
                 Регистрация
               </Link>
             </>
           ) : (
             <>
-              <Link className={`nav-btn ${isActive("/profile") ? "active" : ""}`} to="/profile">
+              <Link
+                className={`nav-btn ${isActive("/profile") ? "active" : ""}`}
+                to="/profile"
+                onClick={closeMenu}
+              >
                 Профиль
               </Link>
-              <button className="nav-btn nav-logout" onClick={handleLogout}>
+
+              <button
+                type="button"
+                className="nav-btn nav-logout"
+                onClick={handleLogout}
+              >
                 Выйти
               </button>
             </>
