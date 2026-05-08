@@ -4212,3 +4212,25 @@ a {
 .avatar-upload-btn:hover {
   opacity: 0.9;
 }
+
+
+.nav-link {
+  padding: 12px 24px;
+  border-radius: 999px;
+
+  color: #e7e9ff;
+  text-decoration: none;
+  font-weight: 600;
+
+  transition: 0.25s ease;
+}
+
+.nav-link:hover {
+  background: rgba(124, 108, 242, 0.12);
+}
+
+.nav-link.active {
+  border: 1px solid #7c6cf2;
+  background: rgba(124, 108, 242, 0.14);
+  box-shadow: 0 0 18px rgba(124, 108, 242, 0.18);
+}

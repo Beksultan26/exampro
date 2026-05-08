@@ -109,16 +109,13 @@ export default function Layout() {
           </Link>
 
           {isLoggedIn && (
-  <button
-    type="button"
+  <Link
     className={`nav-btn ${isActive("/admin") ? "active" : ""}`}
-    onClick={() => {
-      setMenuOpen(false);
-      navigate("/admin");
-    }}
+    to="/admin"
+    onClick={closeMenu}
   >
     Админка
-  </button>
+  </Link>
 )}
 
           {!isLoggedIn ? (
