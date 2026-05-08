@@ -6,14 +6,17 @@ const admin_middleware_1 = require("../../middlewares/admin.middleware");
 const admin_controller_1 = require("./admin.controller");
 const router = (0, express_1.Router)();
 router.use(auth_middleware_1.authMiddleware, admin_middleware_1.adminMiddleware);
+// Subjects
 router.get("/subjects", admin_controller_1.getAdminSubjectsController);
 router.post("/subjects", admin_controller_1.createAdminSubjectController);
 router.put("/subjects/:id", admin_controller_1.updateAdminSubjectController);
 router.delete("/subjects/:id", admin_controller_1.deleteAdminSubjectController);
+// Questions
 router.get("/subjects/:slug/questions", admin_controller_1.getAdminQuestionsController);
 router.post("/questions", admin_controller_1.createAdminQuestionController);
 router.put("/questions/:id", admin_controller_1.updateAdminQuestionController);
 router.delete("/questions/:id", admin_controller_1.deleteAdminQuestionController);
+// Topics
 router.get("/subjects/:slug/topics", admin_controller_1.getAdminTopicsController);
 router.post("/topics", admin_controller_1.createAdminTopicController);
 router.put("/topics/:id", admin_controller_1.updateAdminTopicController);

@@ -1,7 +1,10 @@
 import { Router } from "express";
+
 import {
   loginController,
   meController,
+  forgotPasswordController,
+  resetPasswordController,
 } from "./auth.controller";
 
 import { authMiddleware } from "../../middlewares/auth.middleware";
@@ -15,7 +18,20 @@ import {
 const router = Router();
 
 router.post("/login", authRateLimiter, loginController);
+
 router.get("/me", authMiddleware, meController);
+
+router.post(
+  "/forgot-password",
+  authRateLimiter,
+  forgotPasswordController
+);
+
+router.post(
+  "/reset-password",
+  authRateLimiter,
+  resetPasswordController
+);
 
 router.get("/google", (_req, res) => {
   const url = getGoogleAuthUrl();
@@ -40,6 +56,7 @@ router.get("/google/callback", async (req, res) => {
     );
   } catch (error) {
     console.error("Google auth error:", error);
+
     return res.redirect(`${process.env.CLIENT_URL}/login?error=google`);
   }
 });

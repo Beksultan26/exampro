@@ -7,6 +7,6 @@ exports.signAccessToken = signAccessToken;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const env_1 = require("../config/env");
 function signAccessToken(payload) {
-    return jsonwebtoken_1.default.sign(payload, env_1.env.accessSecret, { expiresIn: "7d" });
+    return jsonwebtoken_1.default.sign(payload, env_1.env.jwtAccessSecret, { expiresIn: "7d" });
 }
 //# sourceMappingURL=jwt.js.map

@@ -13,178 +13,149 @@ exports.createAdminTopicController = createAdminTopicController;
 exports.updateAdminTopicController = updateAdminTopicController;
 exports.deleteAdminTopicController = deleteAdminTopicController;
 const admin_service_1 = require("./admin.service");
-async function getAdminSubjectsController(_req, res) {
-    const subjects = await (0, admin_service_1.getAdminSubjects)();
-    return res.status(200).json(subjects);
+function getParam(value) {
+    if (Array.isArray(value))
+        return value[0] || "";
+    return value || "";
 }
-async function createAdminSubjectController(req, res) {
-    const { title, slug, description, icon, color, group } = req.body;
-    if (!title || !slug || !group) {
-        return res.status(400).json({
-            message: "title, slug и group обязательны",
+async function getAdminSubjectsController(_req, res) {
+    try {
+        const subjects = await (0, admin_service_1.getAdminSubjects)();
+        return res.json(subjects);
+    }
+    catch (error) {
+        return res.status(500).json({
+            message: error?.message || "Не удалось загрузить предметы",
         });
     }
+}
+async function createAdminSubjectController(req, res) {
     try {
-        const subject = await (0, admin_service_1.createAdminSubject)({
-            title,
-            slug,
-            description,
-            icon,
-            color,
-            group,
-        });
+        const subject = await (0, admin_service_1.createAdminSubject)(req.body);
         return res.status(201).json(subject);
     }
     catch (error) {
         return res.status(400).json({
-            message: error instanceof Error ? error.message : "Ошибка создания предмета",
+            message: error?.message || "Не удалось создать предмет",
         });
     }
 }
 async function updateAdminSubjectController(req, res) {
-    const id = String(req.params.id);
-    const { title, slug, description, icon, color, group } = req.body;
-    if (!title || !slug || !group) {
-        return res.status(400).json({
-            message: "title, slug и group обязательны",
-        });
-    }
     try {
-        const subject = await (0, admin_service_1.updateAdminSubject)(id, {
-            title,
-            slug,
-            description,
-            icon,
-            color,
-            group,
-        });
-        return res.status(200).json(subject);
+        const id = getParam(req.params.id);
+        const subject = await (0, admin_service_1.updateAdminSubject)(id, req.body);
+        return res.json(subject);
     }
     catch (error) {
         return res.status(400).json({
-            message: error instanceof Error ? error.message : "Ошибка обновления предмета",
+            message: error?.message || "Не удалось обновить предмет",
         });
     }
 }
 async function deleteAdminSubjectController(req, res) {
-    const id = String(req.params.id);
     try {
+        const id = getParam(req.params.id);
         await (0, admin_service_1.deleteAdminSubject)(id);
-        return res.status(200).json({ message: "Предмет удалён" });
+        return res.json({ message: "Предмет удалён" });
     }
-    catch {
-        return res.status(400).json({ message: "Ошибка удаления предмета" });
+    catch (error) {
+        return res.status(400).json({
+            message: error?.message || "Не удалось удалить предмет",
+        });
     }
 }
 async function getAdminQuestionsController(req, res) {
-    const slug = String(req.params.slug);
     try {
-        const subject = await (0, admin_service_1.getAdminQuestionsBySubject)(slug);
-        return res.status(200).json(subject);
+        const slug = getParam(req.params.slug);
+        const questions = await (0, admin_service_1.getAdminQuestions)(slug);
+        return res.json(questions);
     }
     catch (error) {
-        return res.status(404).json({
-            message: error instanceof Error ? error.message : "Предмет не найден",
+        return res.status(400).json({
+            message: error?.message || "Не удалось загрузить вопросы",
         });
     }
 }
 async function createAdminQuestionController(req, res) {
-    const { subjectSlug, questionText, explanation, options } = req.body;
     try {
-        const question = await (0, admin_service_1.createAdminQuestion)({
-            subjectSlug,
-            questionText,
-            explanation,
-            options,
-        });
+        const question = await (0, admin_service_1.createAdminQuestion)(req.body);
         return res.status(201).json(question);
     }
     catch (error) {
         return res.status(400).json({
-            message: error instanceof Error ? error.message : "Ошибка создания вопроса",
+            message: error?.message || "Не удалось создать вопрос",
         });
     }
 }
 async function updateAdminQuestionController(req, res) {
-    const id = String(req.params.id);
-    const { questionText, explanation } = req.body;
-    if (!questionText) {
-        return res.status(400).json({ message: "Текст вопроса обязателен" });
-    }
     try {
-        const question = await (0, admin_service_1.updateAdminQuestion)(id, {
-            questionText,
-            explanation,
-        });
-        return res.status(200).json(question);
+        const id = getParam(req.params.id);
+        const question = await (0, admin_service_1.updateAdminQuestion)(id, req.body);
+        return res.json(question);
     }
-    catch {
-        return res.status(400).json({ message: "Ошибка обновления вопроса" });
+    catch (error) {
+        return res.status(400).json({
+            message: error?.message || "Не удалось обновить вопрос",
+        });
     }
 }
 async function deleteAdminQuestionController(req, res) {
-    const id = String(req.params.id);
     try {
+        const id = getParam(req.params.id);
         await (0, admin_service_1.deleteAdminQuestion)(id);
-        return res.status(200).json({ message: "Вопрос удалён" });
+        return res.json({ message: "Вопрос удалён" });
     }
-    catch {
-        return res.status(400).json({ message: "Ошибка удаления вопроса" });
+    catch (error) {
+        return res.status(400).json({
+            message: error?.message || "Не удалось удалить вопрос",
+        });
     }
 }
 async function getAdminTopicsController(req, res) {
-    const slug = String(req.params.slug);
     try {
-        const subject = await (0, admin_service_1.getAdminTopicsBySubject)(slug);
-        return res.status(200).json(subject);
+        const slug = getParam(req.params.slug);
+        const topics = await (0, admin_service_1.getAdminTopics)(slug);
+        return res.json(topics);
     }
     catch (error) {
-        return res.status(404).json({
-            message: error instanceof Error ? error.message : "Предмет не найден",
+        return res.status(400).json({
+            message: error?.message || "Не удалось загрузить темы",
         });
     }
 }
 async function createAdminTopicController(req, res) {
-    const { subjectSlug, title, content } = req.body;
     try {
-        const topic = await (0, admin_service_1.createAdminTopic)({
-            subjectSlug,
-            title,
-            content,
-        });
+        const topic = await (0, admin_service_1.createAdminTopic)(req.body);
         return res.status(201).json(topic);
     }
     catch (error) {
         return res.status(400).json({
-            message: error instanceof Error ? error.message : "Ошибка создания темы",
+            message: error?.message || "Не удалось создать тему",
         });
     }
 }
 async function updateAdminTopicController(req, res) {
-    const id = String(req.params.id);
-    const { title, content } = req.body;
-    if (!title || !content) {
-        return res.status(400).json({ message: "Название и текст темы обязательны" });
-    }
     try {
-        const topic = await (0, admin_service_1.updateAdminTopic)(id, {
-            title,
-            content,
-        });
-        return res.status(200).json(topic);
+        const id = getParam(req.params.id);
+        const topic = await (0, admin_service_1.updateAdminTopic)(id, req.body);
+        return res.json(topic);
     }
-    catch {
-        return res.status(400).json({ message: "Ошибка обновления темы" });
+    catch (error) {
+        return res.status(400).json({
+            message: error?.message || "Не удалось обновить тему",
+        });
     }
 }
 async function deleteAdminTopicController(req, res) {
-    const id = String(req.params.id);
     try {
+        const id = getParam(req.params.id);
         await (0, admin_service_1.deleteAdminTopic)(id);
-        return res.status(200).json({ message: "Тема удалена" });
+        return res.json({ message: "Тема удалена" });
     }
-    catch {
-        return res.status(400).json({ message: "Ошибка удаления темы" });
+    catch (error) {
+        return res.status(400).json({
+            message: error?.message || "Не удалось удалить тему",
+        });
     }
 }
 //# sourceMappingURL=admin.controller.js.map

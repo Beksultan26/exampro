@@ -7,18 +7,27 @@ exports.authMiddleware = authMiddleware;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const env_1 = require("../config/env");
 function authMiddleware(req, res, next) {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        return res.status(401).json({ message: "Не авторизован" });
-    }
-    const token = authHeader.split(" ")[1];
     try {
-        const decoded = jsonwebtoken_1.default.verify(token, env_1.env.accessSecret);
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith("Bearer ")) {
+            return res.status(401).json({
+                message: "Не авторизован",
+            });
+        }
+        const token = authHeader.split(" ")[1];
+        if (!token) {
+            return res.status(401).json({
+                message: "Токен отсутствует",
+            });
+        }
+        const decoded = jsonwebtoken_1.default.verify(token, env_1.env.jwtAccessSecret);
         req.user = decoded;
         next();
     }
-    catch {
-        return res.status(401).json({ message: "Неверный токен" });
+    catch (error) {
+        return res.status(401).json({
+            message: "Неверный или истекший токен",
+        });
     }
 }
 //# sourceMappingURL=auth.middleware.js.map

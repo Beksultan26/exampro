@@ -9,14 +9,15 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const morgan_1 = __importDefault(require("morgan"));
+const path_1 = __importDefault(require("path"));
 const auth_routes_1 = __importDefault(require("./modules/auth/auth.routes"));
 const subjects_routes_1 = __importDefault(require("./modules/subjects/subjects.routes"));
 const theory_routes_1 = __importDefault(require("./modules/theory/theory.routes"));
 const quiz_routes_1 = __importDefault(require("./modules/quiz/quiz.routes"));
 const admin_routes_1 = __importDefault(require("./modules/admin/admin.routes"));
+const profile_routes_1 = __importDefault(require("./modules/profile/profile.routes"));
 const env_1 = require("./config/env");
 const app = (0, express_1.default)();
-// Важно для Railway / rate-limit / X-Forwarded-For
 app.set("trust proxy", 1);
 app.use((0, cors_1.default)({
     origin: env_1.env.clientUrl,
@@ -29,10 +30,20 @@ app.use(express_1.default.urlencoded({ extended: true }));
 app.get("/api/health", (_req, res) => {
     res.json({ ok: true, message: "Server is running" });
 });
+// API routes
 app.use("/api/auth", auth_routes_1.default);
 app.use("/api/admin", admin_routes_1.default);
+app.use("/api/profile", profile_routes_1.default);
 app.use("/api/subjects", subjects_routes_1.default);
 app.use("/api/topics", theory_routes_1.default);
 app.use("/api/quiz", quiz_routes_1.default);
+// uploaded files
+app.use("/uploads", express_1.default.static(path_1.default.join(process.cwd(), "uploads")));
+// frontend build
+app.use(express_1.default.static(path_1.default.join(process.cwd(), "public")));
+// SPA fallback
+app.get(/.*/, (_req, res) => {
+    res.sendFile(path_1.default.join(process.cwd(), "public", "index.html"));
+});
 exports.default = app;
 //# sourceMappingURL=app.js.map

@@ -64,6 +64,13 @@ async function getQuizBySubjectSlug(slug, userId, mode) {
 }
 async function getExamQuiz() {
     const questions = await db_1.prisma.question.findMany({
+        where: {
+            subject: {
+                slug: {
+                    not: "general-exam",
+                },
+            },
+        },
         include: {
             options: {
                 select: {
@@ -88,6 +95,13 @@ async function getExamQuiz() {
 }
 async function submitExamQuiz(userId, answers) {
     const questions = await db_1.prisma.question.findMany({
+        where: {
+            subject: {
+                slug: {
+                    not: "general-exam",
+                },
+            },
+        },
         include: {
             options: true,
         },
@@ -229,13 +243,19 @@ async function getAttemptById(attemptId, userId) {
             answers: {
                 include: {
                     question: {
-                        select: {
-                            questionText: true,
-                            explanation: true,
+                        include: {
+                            options: {
+                                select: {
+                                    id: true,
+                                    optionText: true,
+                                    isCorrect: true,
+                                },
+                            },
                         },
                     },
                     selectedOption: {
                         select: {
+                            id: true,
                             optionText: true,
                         },
                     },

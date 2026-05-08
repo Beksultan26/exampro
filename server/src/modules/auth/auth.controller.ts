@@ -1,89 +1,37 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import { prisma } from "../../config/db";
-import {
-  comparePassword,
-  hashPassword,
-  normalizeEmail,
-  signAccessToken,
-} from "./auth.service";
-import { AuthRequest } from "../../middlewares/auth.middleware";
+import jwt from "jsonwebtoken";
 
-function generateCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
+import { prisma } from "../../lib/prisma";
+import { sendEmail } from "../../lib/send-email";
 
-export async function registerController(req: Request, res: Response) {
-  try {
-    const { name, email, password } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ message: "Заполните все поля" });
-    }
-
-    const normalizedEmail = normalizeEmail(email);
-
-    const exists = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-    });
-
-    if (exists) {
-      return res.status(409).json({ message: "Пользователь уже существует" });
-    }
-
-    const passwordHash = await hashPassword(password);
-
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email: normalizedEmail,
-        passwordHash,
-      },
-    });
-
-    const accessToken = signAccessToken(user);
-
-    return res.status(201).json({
-      accessToken,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatarUrl: user.avatarUrl,
-      },
-    });
-  } catch (error) {
-    console.error("Register error:", error);
-    return res.status(500).json({ message: "Ошибка регистрации" });
-  }
+function signToken(userId: string, email: string, role: string) {
+  return jwt.sign(
+    { userId, email, role },
+    process.env.JWT_ACCESS_SECRET || "secret",
+    { expiresIn: "7d" }
+  );
 }
 
 export async function loginController(req: Request, res: Response) {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Введите email и пароль" });
-    }
-
-    const normalizedEmail = normalizeEmail(email);
-
     const user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
+      where: { email },
     });
 
-    if (!user || !user.passwordHash) {
+    if (!user) {
       return res.status(401).json({ message: "Неверный email или пароль" });
     }
 
-    const isValid = await comparePassword(password, user.passwordHash);
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
 
-    if (!isValid) {
+    if (!isValidPassword) {
       return res.status(401).json({ message: "Неверный email или пароль" });
     }
 
-    const accessToken = signAccessToken(user);
+    const accessToken = signToken(user.id, user.email, user.role);
 
     return res.json({
       accessToken,
@@ -96,44 +44,29 @@ export async function loginController(req: Request, res: Response) {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error(error);
     return res.status(500).json({ message: "Ошибка входа" });
   }
 }
 
-export async function meController(req: AuthRequest, res: Response) {
+export async function meController(req: any, res: Response) {
   try {
-    if (!req.user?.userId) {
-      return res.status(401).json({ message: "Не авторизован" });
-    }
-
     const user = await prisma.user.findUnique({
       where: { id: req.user.userId },
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: "Пользователь не найден" });
-    }
-
-    return res.json({
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        avatarUrl: user.avatarUrl,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        avatarUrl: true,
       },
     });
+
+    return res.json(user);
   } catch (error) {
-    console.error("Me error:", error);
+    console.error(error);
     return res.status(500).json({ message: "Ошибка получения профиля" });
   }
-}
-
-export async function verifyLoginOtpController(req: Request, res: Response) {
-  return res.status(400).json({
-    message: "OTP вход сейчас отключен. Используйте обычный вход или Google.",
-  });
 }
 
 export async function forgotPasswordController(req: Request, res: Response) {
@@ -141,89 +74,85 @@ export async function forgotPasswordController(req: Request, res: Response) {
     const { email } = req.body;
 
     if (!email) {
-      return res.status(400).json({ message: "Введите email" });
+      return res.status(400).json({ message: "Email обязателен" });
     }
 
-    const normalizedEmail = normalizeEmail(email);
-
     const user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
+      where: { email },
     });
 
     if (!user) {
-      return res.json({
-        message: "Если email существует, код будет отправлен",
-      });
+      return res.status(404).json({ message: "Пользователь не найден" });
     }
 
-    const code = generateCode();
-    const codeHash = await bcrypt.hash(code, 10);
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const codeHash = await bcrypt.hash(resetCode, 10);
 
-    await prisma.passwordResetOtp.create({
+    await prisma.loginOtp.create({
       data: {
-        email: normalizedEmail,
+        email,
         codeHash,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        expiresAt: new Date(Date.now() + 1000 * 60 * 10),
       },
     });
 
-    console.log(`Password reset code for ${normalizedEmail}: ${code}`);
-
-    return res.json({
-      message: "Код восстановления создан",
+    await sendEmail({
+      to: email,
+      subject: "Сброс пароля ExamPro",
+      html: `
+        <div style="font-family: Arial, sans-serif;">
+          <h2>Сброс пароля</h2>
+          <p>Ваш код для восстановления пароля:</p>
+          <h1>${resetCode}</h1>
+          <p>Код действует 10 минут.</p>
+        </div>
+      `,
     });
+
+    return res.json({ message: "Код отправлен" });
   } catch (error) {
-    console.error("Forgot password error:", error);
-    return res.status(500).json({ message: "Ошибка восстановления пароля" });
+    console.error(error);
+    return res.status(500).json({ message: "Ошибка отправки кода" });
   }
 }
 
 export async function resetPasswordController(req: Request, res: Response) {
   try {
-    const { email, code, password } = req.body;
+    const { email, code, newPassword } = req.body;
 
-    if (!email || !code || !password) {
+    if (!email || !code || !newPassword) {
       return res.status(400).json({ message: "Заполните все поля" });
     }
 
-    const normalizedEmail = normalizeEmail(email);
-
-    const otp = await prisma.passwordResetOtp.findFirst({
-      where: {
-        email: normalizedEmail,
-        expiresAt: {
-          gt: new Date(),
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
+    const otp = await prisma.loginOtp.findFirst({
+      where: { email },
+      orderBy: { createdAt: "desc" },
     });
 
     if (!otp) {
-      return res.status(400).json({ message: "Код недействителен или истёк" });
+      return res.status(400).json({ message: "Код не найден" });
     }
 
-    const isCodeValid = await bcrypt.compare(code, otp.codeHash);
+    if (otp.expiresAt < new Date()) {
+      return res.status(400).json({ message: "Код истёк" });
+    }
 
-    if (!isCodeValid) {
+    const isValidCode = await bcrypt.compare(code, otp.codeHash);
+
+    if (!isValidCode) {
       return res.status(400).json({ message: "Неверный код" });
     }
 
-    const passwordHash = await hashPassword(password);
+    const passwordHash = await bcrypt.hash(newPassword, 10);
 
     await prisma.user.update({
-      where: { email: normalizedEmail },
+      where: { email },
       data: { passwordHash },
-    });
-
-    await prisma.passwordResetOtp.deleteMany({
-      where: { email: normalizedEmail },
     });
 
     return res.json({ message: "Пароль успешно изменён" });
   } catch (error) {
-    console.error("Reset password error:", error);
-    return res.status(500).json({ message: "Ошибка смены пароля" });
+    console.error(error);
+    return res.status(500).json({ message: "Ошибка сброса пароля" });
   }
 }

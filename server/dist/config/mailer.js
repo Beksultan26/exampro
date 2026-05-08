@@ -1,67 +1,52 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendOtpEmail = sendOtpEmail;
 exports.sendPasswordResetEmail = sendPasswordResetEmail;
+exports.sendLoginOtpEmail = sendLoginOtpEmail;
 const resend_1 = require("resend");
-const resendApiKey = process.env.RESEND_API_KEY || "";
-const senderEmail = process.env.SMTP_FROM_EMAIL || "noreply@send.examproapp.online";
-const senderName = process.env.SMTP_FROM_NAME || "ExamPro";
-const resend = new resend_1.Resend(resendApiKey);
-function getFromField() {
-    return `${senderName} <${senderEmail}>`;
+const resend = new resend_1.Resend(process.env.RESEND_API_KEY);
+function ensureEnv() {
+    if (!process.env.RESEND_API_KEY) {
+        throw new Error("RESEND_API_KEY is not set");
+    }
+    if (!process.env.MAIL_FROM) {
+        throw new Error("MAIL_FROM is not set");
+    }
 }
-async function sendOtpEmail(email, code) {
-    if (!resendApiKey) {
-        throw new Error("RESEND_API_KEY is missing");
-    }
-    const subject = "Код подтверждения входа";
-    const text = `Ваш код подтверждения: ${code}. Код действует 10 минут.`;
-    const html = `
-    <div style="font-family: Arial, sans-serif; padding: 20px;">
-      <h2>ExamPro</h2>
-      <p>Ваш код подтверждения:</p>
-      <h1 style="letter-spacing: 6px;">${code}</h1>
-      <p>Код действует 10 минут.</p>
-    </div>
-  `;
-    const { data, error } = await resend.emails.send({
-        from: getFromField(),
-        to: [email],
-        subject,
-        text,
-        html,
+async function sendPasswordResetEmail(to, code) {
+    ensureEnv();
+    await resend.emails.send({
+        from: process.env.MAIL_FROM,
+        to,
+        subject: "Сброс пароля ExamPro",
+        html: `
+      <div style="font-family: Arial, sans-serif; color: #111;">
+        <h2>Сброс пароля</h2>
+        <p>Ваш код для сброса пароля:</p>
+        <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px; margin: 16px 0;">
+          ${code}
+        </div>
+        <p>Код действует 10 минут.</p>
+      </div>
+    `,
     });
-    if (error) {
-        console.error("RESEND OTP ERROR:", error);
-        throw new Error(`Resend send failed: ${error.message}`);
-    }
-    console.log("OTP SENT:", data);
 }
-async function sendPasswordResetEmail(email, code) {
-    if (!resendApiKey) {
-        throw new Error("RESEND_API_KEY is missing");
-    }
-    const subject = "Сброс пароля";
-    const text = `Ваш код для сброса пароля: ${code}. Код действует 10 минут.`;
-    const html = `
-    <div style="font-family: Arial, sans-serif; padding: 20px;">
-      <h2>Сброс пароля</h2>
-      <p>Ваш код для сброса:</p>
-      <h1 style="letter-spacing: 6px;">${code}</h1>
-      <p>Код действует 10 минут.</p>
-    </div>
-  `;
-    const { data, error } = await resend.emails.send({
-        from: getFromField(),
-        to: [email],
-        subject,
-        text,
-        html,
+async function sendLoginOtpEmail(to, code) {
+    ensureEnv();
+    await resend.emails.send({
+        from: process.env.MAIL_FROM,
+        to,
+        subject: "Код входа ExamPro",
+        html: `
+      <div style="font-family: Arial, sans-serif; color: #111;">
+        <h2>Подтверждение входа</h2>
+        <p>Вы пытаетесь войти в аккаунт ExamPro.</p>
+        <p>Ваш код входа:</p>
+        <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px; margin: 16px 0;">
+          ${code}
+        </div>
+        <p>Код действует 10 минут.</p>
+      </div>
+    `,
     });
-    if (error) {
-        console.error("RESEND RESET ERROR:", error);
-        throw new Error(`Resend send failed: ${error.message}`);
-    }
-    console.log("RESET OTP SENT:", data);
 }
 //# sourceMappingURL=mailer.js.map
